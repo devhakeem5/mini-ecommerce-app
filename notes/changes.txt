@@ -1,0 +1,12 @@
+
+[Previous Changes]
+- ... (Dynamic Categories)
+
+[Promotions Slider]
+- Updated `PromotionsSlider` to use real data from `ProductsCubit`.
+- Logic: Skip first 12 products (used in New Arrivals & Recommended) to ensure uniqueness.
+- UI: Implemented `Row` layout containing:
+    - Left: Column with Brand, Title, Description, and "Buy Now" button.
+    - Right: Product Image with Hero animation.
+- Discount Logic: Uses `discountPercentage`. If 0, defaults to 5% OFF.
+- Navigation: Clicking card or button navigates to `ProductDetailsPage`.
