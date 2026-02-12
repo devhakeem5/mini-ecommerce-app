@@ -62,7 +62,7 @@ class ProductsRepositoryImpl implements ProductsRepository {
   }) async* {
     try {
       final cached = await local.getCachedProducts(cacheKey: cacheKey);
-      if (cached != null) {
+      if (cached != null && cached.isNotEmpty) {
         final products = cached.map((e) => ProductModel.fromJson(e).toEntity()).toList();
         yield Right(ProductsResult(products: products, isOffline: true));
       }

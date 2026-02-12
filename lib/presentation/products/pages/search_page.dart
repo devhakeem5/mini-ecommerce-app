@@ -248,7 +248,8 @@ class _SearchPageState extends State<SearchPage> {
 
   Widget _buildSearchResults(SearchResultsLoaded state) {
     if (state.products.isEmpty) {
-      if (state.isOffline || context.read<ConnectivityCubit>().state is ConnectivityOffline) {
+      final isActuallyOffline = context.read<ConnectivityCubit>().state is ConnectivityOffline;
+      if (isActuallyOffline) {
         return OfflineWidget(
           onRetry: () {
             final query = _searchController.text.trim();
@@ -256,6 +257,13 @@ class _SearchPageState extends State<SearchPage> {
               context.read<SearchCubit>().search(query);
             }
           },
+        );
+      }
+      // If we are online but products are empty AND it's from cache (isOffline: true),
+      // it means we haven't received remote results yet. Keep showing loading/skeleton.
+      if (state.isOffline) {
+        return ProductGridSkeleton(
+          crossAxisCount: context.responsiveValue(mobile: 2, tablet: 3, desktop: 4),
         );
       }
       return Center(

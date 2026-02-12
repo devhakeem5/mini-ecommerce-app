@@ -155,9 +155,24 @@ class _AllProductsPageState extends State<AllProductsPage> {
 
                               if (state is ProductListLoaded) {
                                 if (state.products.isEmpty) {
-                                  if (state.isOffline) {
+                                  final isActuallyOffline =
+                                      context.read<ConnectivityCubit>().state
+                                          is ConnectivityOffline;
+                                  if (isActuallyOffline) {
                                     return OfflineWidget(
                                       onRetry: () => _cubit.loadInitial(category: widget.category),
+                                    );
+                                  }
+
+                                  // If we are online but products are empty AND it's from cache (isOffline: true),
+                                  // it means we haven't received remote results yet. Keep showing loading/skeleton.
+                                  if (state.isOffline) {
+                                    return ProductGridSkeleton(
+                                      crossAxisCount: context.responsiveValue(
+                                        mobile: 2,
+                                        tablet: 3,
+                                        desktop: 4,
+                                      ),
                                     );
                                   }
                                   return EmptyWidget(title: context.tr('all_products'));
