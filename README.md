@@ -1,8 +1,5 @@
 # Mini Commerce App 🛍️
 
-## 📺 App Demo
-![Mini Commerce App Demo](screenshots/demo.mp4)
-
 A premium Flutter e-commerce application built with **Clean Architecture**, **Cubit State Management**, and an **Offline-First** strategy. The app delivers a seamless, production-grade shopping experience with a focus on architecture quality, performance, and polished UX.
 
 **API**: [DummyJSON Products API](https://dummyjson.com/products) — supports pagination, search, and category filtering.
@@ -87,7 +84,7 @@ A premium Flutter e-commerce application built with **Clean Architecture**, **Cu
 
 ---
 
-## 🌟 Beyond Requirements — Extra Features
+## Beyond Requirements — Extra Features
 
 These features were **not required** by the challenge but were implemented to demonstrate production-quality engineering:
 
@@ -110,7 +107,7 @@ These features were **not required** by the challenge but were implemented to de
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 lib/
@@ -172,7 +169,7 @@ UI (Cubit) → UseCase → Repository Interface (Domain)
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
@@ -189,7 +186,7 @@ UI (Cubit) → UseCase → Repository Interface (Domain)
 
 ---
 
-## 🧪 Testing
+## Testing
 
 ```bash
 flutter test
@@ -212,7 +209,9 @@ flutter test
 
 ```bash
 # Clone the repository
-git clone <repository-url>
+git clone https://github.com/devhakeem5/mini-ecommerce-app.git
+
+# Navigate to the project directory
 cd mini_commerce_app
 
 # Install dependencies
