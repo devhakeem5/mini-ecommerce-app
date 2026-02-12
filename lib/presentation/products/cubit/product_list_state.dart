@@ -1,7 +1,12 @@
+import 'package:equatable/equatable.dart';
+
 import '../../../domain/entities/product.dart';
 
-abstract class ProductListState {
+abstract class ProductListState extends Equatable {
   const ProductListState();
+
+  @override
+  List<Object?> get props => [];
 }
 
 class ProductListInitial extends ProductListState {
@@ -42,10 +47,22 @@ class ProductListLoaded extends ProductListState {
       loadMoreError: loadMoreError,
     );
   }
+
+  @override
+  List<Object?> get props => [
+    products,
+    hasReachedMax,
+    isOffline,
+    wasPagingAttempted,
+    loadMoreError,
+  ];
 }
 
 class ProductListError extends ProductListState {
   final String message;
 
   const ProductListError(this.message);
+
+  @override
+  List<Object?> get props => [message];
 }

@@ -1,6 +1,11 @@
+import 'package:equatable/equatable.dart';
+
 /// Represents the current network connectivity state.
-abstract class ConnectivityState {
+abstract class ConnectivityState extends Equatable {
   const ConnectivityState();
+
+  @override
+  List<Object?> get props => [];
 }
 
 /// Initial state before connectivity check completes.
@@ -14,6 +19,9 @@ class ConnectivityInitial extends ConnectivityState {
 class ConnectivityOnline extends ConnectivityState {
   final bool wasOffline;
   const ConnectivityOnline({this.wasOffline = false});
+
+  @override
+  List<Object?> get props => [wasOffline];
 }
 
 /// Device has no internet connection.

@@ -82,18 +82,6 @@ class _AllProductsPageState extends State<AllProductsPage> {
                     listener: (context, state) {
                       if (state is ProductListLoaded) {
                         context.read<CartCubit>().syncPrices(state.products);
-                        if (state.loadMoreError != null) {
-                          ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(context.tr(state.loadMoreError!)),
-                              action: SnackBarAction(
-                                label: context.tr('retry'),
-                                onPressed: () => _cubit.loadMore(),
-                              ),
-                            ),
-                          );
-                        }
                       }
                     },
                   ),
