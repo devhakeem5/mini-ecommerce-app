@@ -1,5 +1,8 @@
 # Mini Commerce App 🛍️
 
+## 📺 App Demo
+![Mini Commerce App Demo](screenshots/demo.mp4)
+
 A premium Flutter e-commerce application built with **Clean Architecture**, **Cubit State Management**, and an **Offline-First** strategy. The app delivers a seamless, production-grade shopping experience with a focus on architecture quality, performance, and polished UX.
 
 **API**: [DummyJSON Products API](https://dummyjson.com/products) — supports pagination, search, and category filtering.
