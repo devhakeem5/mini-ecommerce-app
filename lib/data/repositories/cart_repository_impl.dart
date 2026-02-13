@@ -63,29 +63,27 @@ class CartRepositoryImpl implements CartRepository {
 
         if (index >= 0) {
           final existing = items[index];
-          items[index] = existing.copyWith(quantity: existing.quantity + 1);
+          final updatedItem = existing.copyWith(quantity: existing.quantity + 1);
+          await _saveModel(updatedItem);
         } else {
-          items.add(
-            CartItemModel(
-              product: ProductModel(
-                id: product.id,
-                title: product.title,
-                description: product.description,
-                brand: product.brand,
-                category: product.category,
-                price: product.price,
-                discountPercentage: product.discountPercentage,
-                rating: product.rating,
-                thumbnail: product.thumbnail,
-                images: product.images,
-                availabilityStatus: product.availabilityStatus,
-              ),
-              quantity: 1,
+          final newItem = CartItemModel(
+            product: ProductModel(
+              id: product.id,
+              title: product.title,
+              description: product.description,
+              brand: product.brand,
+              category: product.category,
+              price: product.price,
+              discountPercentage: product.discountPercentage,
+              rating: product.rating,
+              thumbnail: product.thumbnail,
+              images: product.images,
+              availabilityStatus: product.availabilityStatus,
             ),
+            quantity: 1,
           );
+          await _saveModel(newItem);
         }
-
-        await _saveModels(items);
       });
       return const Right(null);
     } catch (e) {
@@ -107,8 +105,8 @@ class CartRepositoryImpl implements CartRepository {
 
         if (index == -1) return;
 
-        items[index] = items[index].copyWith(quantity: quantity);
-        await _saveModels(items);
+        final updatedItem = items[index].copyWith(quantity: quantity);
+        await _saveModel(updatedItem);
       });
       return const Right(null);
     } catch (e) {
@@ -120,9 +118,10 @@ class CartRepositoryImpl implements CartRepository {
   Future<Either<Failure, void>> removeFromCart(int productId) async {
     try {
       await _enqueue(() async {
-        final items = await _loadModels();
-        items.removeWhere((e) => e.product.id == productId);
-        await _saveModels(items);
+        // We don't strictly *need* to load models to remove, unless we want to verify existence.
+        // But for O(1) we can just try to delete.
+        // However, existing logic loaded models. Let's stick to safe removal.
+        await localDataSource.removeCartItem(productId);
       });
       return const Right(null);
     } catch (e) {
@@ -153,27 +152,24 @@ class CartRepositoryImpl implements CartRepository {
     }).toList();
   }
 
-  Future<void> _saveModels(List<CartItemModel> items) async {
-    final maps = items.map((item) {
-      return {
-        'product': {
-          'id': item.product.id,
-          'title': item.product.title,
-          'description': item.product.description,
-          'brand': item.product.brand,
-          'category': item.product.category,
-          'price': item.product.price,
-          'discountPercentage': item.product.discountPercentage,
-          'rating': item.product.rating,
-          'thumbnail': item.product.thumbnail,
-          'images': item.product.images,
-          'availabilityStatus': item.product.availabilityStatus,
-        },
-        'quantity': item.quantity,
-      };
-    }).toList();
-
-    await localDataSource.saveCart(maps);
+  Future<void> _saveModel(CartItemModel item) async {
+    final map = {
+      'product': {
+        'id': item.product.id,
+        'title': item.product.title,
+        'description': item.product.description,
+        'brand': item.product.brand,
+        'category': item.product.category,
+        'price': item.product.price,
+        'discountPercentage': item.product.discountPercentage,
+        'rating': item.product.rating,
+        'thumbnail': item.product.thumbnail,
+        'images': item.product.images,
+        'availabilityStatus': item.product.availabilityStatus,
+      },
+      'quantity': item.quantity,
+    };
+    await localDataSource.saveCartItem(map);
   }
 
   @override
@@ -184,14 +180,12 @@ class CartRepositoryImpl implements CartRepository {
         if (items.isEmpty) return;
 
         final productMap = <int, Product>{for (final p in products) p.id: p};
-        bool hasChanges = false;
 
-        for (var i = 0; i < items.length; i++) {
-          final item = items[i];
+        for (final item in items) {
           final freshProduct = productMap[item.product.id];
 
           if (freshProduct != null && freshProduct.price != item.product.price) {
-            items[i] = item.copyWith(
+            final updatedItem = item.copyWith(
               product: ProductModel(
                 id: freshProduct.id,
                 title: freshProduct.title,
@@ -206,12 +200,8 @@ class CartRepositoryImpl implements CartRepository {
                 availabilityStatus: freshProduct.availabilityStatus,
               ),
             );
-            hasChanges = true;
+            await _saveModel(updatedItem);
           }
-        }
-
-        if (hasChanges) {
-          await _saveModels(items);
         }
       });
       return const Right(null);

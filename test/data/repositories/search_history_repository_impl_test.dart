@@ -1,3 +1,4 @@
+import 'package:dartz/dartz.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mini_commerce_app/data/datasources/local/search_history_local_data_source.dart';
 import 'package:mini_commerce_app/data/repositories/search_history_repository_impl.dart';
@@ -20,7 +21,8 @@ void main() {
 
       final result = await repository.getSearchHistory();
 
-      expect(result, ['apple', 'banana']);
+      expect(result.isRight(), true);
+      result.fold((l) => fail('Expected Right'), (r) => expect(r, ['apple', 'banana']));
       verify(() => mockLocal.getSearchHistory()).called(1);
     });
   });
@@ -29,8 +31,9 @@ void main() {
     test('delegates to local data source', () async {
       when(() => mockLocal.addToHistory('test')).thenAnswer((_) async {});
 
-      await repository.addToHistory('test');
+      final result = await repository.addToHistory('test');
 
+      expect(result, const Right(null));
       verify(() => mockLocal.addToHistory('test')).called(1);
     });
 
@@ -59,8 +62,9 @@ void main() {
     test('delegates to local data source', () async {
       when(() => mockLocal.deleteFromHistory('test')).thenAnswer((_) async {});
 
-      await repository.deleteFromHistory('test');
+      final result = await repository.deleteFromHistory('test');
 
+      expect(result, const Right(null));
       verify(() => mockLocal.deleteFromHistory('test')).called(1);
     });
   });

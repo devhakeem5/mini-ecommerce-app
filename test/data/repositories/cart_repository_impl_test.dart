@@ -33,13 +33,13 @@ void main() {
   group('CartRepositoryImpl', () {
     test('should add item to cart and return Right', () async {
       when(() => mockLocalDataSource.loadCart()).thenAnswer((_) async => []);
-      when(() => mockLocalDataSource.saveCart(any())).thenAnswer((_) async {});
+      when(() => mockLocalDataSource.saveCartItem(any())).thenAnswer((_) async {});
 
       final result = await repository.addToCart(tProduct);
 
       expect(result, const Right(null));
       verify(() => mockLocalDataSource.loadCart()).called(1);
-      verify(() => mockLocalDataSource.saveCart(any())).called(1);
+      verify(() => mockLocalDataSource.saveCartItem(any())).called(1);
     });
 
     test('should load cart items and return Right', () async {
@@ -99,15 +99,14 @@ void main() {
         'quantity': 1,
       };
       when(() => mockLocalDataSource.loadCart()).thenAnswer((_) async => [tExistingCartMap]);
-      when(() => mockLocalDataSource.saveCart(any())).thenAnswer((_) async {});
+      when(() => mockLocalDataSource.saveCartItem(any())).thenAnswer((_) async {});
 
       final result = await repository.addToCart(tProduct);
 
       expect(result, const Right(null));
       final captured =
-          verify(() => mockLocalDataSource.saveCart(captureAny())).captured.single as List;
-      expect(captured.length, 1);
-      expect(captured.first['quantity'], 2);
+          verify(() => mockLocalDataSource.saveCartItem(captureAny())).captured.single as Map;
+      expect(captured['quantity'], 2);
     });
 
     test('should update quantity for existing item and return Right', () async {
@@ -128,42 +127,23 @@ void main() {
         'quantity': 1,
       };
       when(() => mockLocalDataSource.loadCart()).thenAnswer((_) async => [tCartMap]);
-      when(() => mockLocalDataSource.saveCart(any())).thenAnswer((_) async {});
+      when(() => mockLocalDataSource.saveCartItem(any())).thenAnswer((_) async {});
 
       final result = await repository.updateQuantity(productId: 1, quantity: 5);
 
       expect(result, const Right(null));
       final captured =
-          verify(() => mockLocalDataSource.saveCart(captureAny())).captured.single as List;
-      expect(captured.first['quantity'], 5);
+          verify(() => mockLocalDataSource.saveCartItem(captureAny())).captured.single as Map;
+      expect(captured['quantity'], 5);
     });
 
     test('should remove item from cart and return Right', () async {
-      final tCartMap = {
-        'product': {
-          'id': 1,
-          'title': 'Test Product',
-          'description': 'Desc',
-          'brand': 'Brand',
-          'category': 'Category',
-          'price': 100.0,
-          'discountPercentage': 0.0,
-          'rating': 4.5,
-          'thumbnail': 'url',
-          'images': [],
-          'availabilityStatus': 'In Stock',
-        },
-        'quantity': 1,
-      };
-      when(() => mockLocalDataSource.loadCart()).thenAnswer((_) async => [tCartMap]);
-      when(() => mockLocalDataSource.saveCart(any())).thenAnswer((_) async {});
+      when(() => mockLocalDataSource.removeCartItem(any())).thenAnswer((_) async {});
 
       final result = await repository.removeFromCart(1);
 
       expect(result, const Right(null));
-      final captured =
-          verify(() => mockLocalDataSource.saveCart(captureAny())).captured.single as List;
-      expect(captured, isEmpty);
+      verify(() => mockLocalDataSource.removeCartItem(1)).called(1);
     });
 
     test('should clear cart and return Right', () async {
