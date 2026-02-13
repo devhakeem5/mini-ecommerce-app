@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:mini_commerce_app/core/localization/app_localizations.dart';
 import 'package:mini_commerce_app/core/util/responsive.dart';
 import 'package:mini_commerce_app/presentation/products/widgets/blogs_list.dart';
 import 'package:mini_commerce_app/presentation/products/widgets/brands_list.dart';
@@ -51,22 +50,7 @@ class _HomeView extends StatelessWidget {
 
     return MultiBlocListener(
       listeners: [
-        BlocListener<ProductsCubit, ProductsState>(
-          listener: (context, state) {
-            if (state is ProductsLoaded && state.loadMoreError != null) {
-              ScaffoldMessenger.of(context).hideCurrentSnackBar();
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(context.trRead(state.loadMoreError!)),
-                  action: SnackBarAction(
-                    label: context.trRead('retry'),
-                    onPressed: () => context.read<ProductsCubit>().loadMoreProducts(),
-                  ),
-                ),
-              );
-            }
-          },
-        ),
+       
         BlocListener<ConnectivityCubit, ConnectivityState>(
           listenWhen: (previous, current) =>
               previous is ConnectivityOffline && current is ConnectivityOnline,

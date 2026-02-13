@@ -85,7 +85,6 @@ class _VisualCartOverlayState extends State<VisualCartOverlay> with TickerProvid
         ..end = 1.0;
       _showHideController.forward(from: 0);
     } else {
-      // Exit to right — compute offset to clear the right edge
       final screenWidth = MediaQuery.of(context).size.width;
       final exitOffsetX = (screenWidth - _basketLeft) / (_basketWidth + 10);
       _slideTween
