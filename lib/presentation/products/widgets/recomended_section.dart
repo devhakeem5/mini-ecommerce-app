@@ -6,6 +6,8 @@ import '/presentation/common/widgets/custom_error_widget.dart';
 import '/presentation/common/widgets/empty_widget.dart';
 import '/presentation/common/widgets/offline_banner.dart';
 import '/presentation/products/widgets/product_horizontal_list.dart';
+import '../../../core/di/service_locator.dart';
+import '../../../domain/usecases/products/filter_recommended_products_usecase.dart';
 import '../../common/widgets/section_title.dart';
 import '../../products/cubit/products_cubit.dart';
 import '../../products/cubit/products_state.dart';
@@ -30,7 +32,7 @@ class RecomendedSection extends StatelessWidget {
             return EmptyWidget(title: title);
           }
 
-          final products = state.products.skip(6).take(6).toList();
+          final products = sl<FilterRecommendedProductsUseCase>()(state.products);
 
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,

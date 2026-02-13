@@ -261,6 +261,14 @@ This ensures each unique page/filter combination has its own cache entry.
 
 ---
 
+### Offline Write Synchronization (Design-Ready Layer)
+
+The project includes a structured `OfflineSyncService` to demonstrate how deferred write operations would be reconciled with a backend in a production system.
+
+Since the DummyJSON API is read-only, full write synchronization is intentionally not implemented. The service currently acts as a strategy placeholder to illustrate extensibility without introducing unnecessary complexity.
+
+---
+
 ## 9. Pagination Merge Strategy
 
 ### Deduplication Approach

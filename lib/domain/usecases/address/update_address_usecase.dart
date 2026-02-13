@@ -1,3 +1,6 @@
+import 'package:dartz/dartz.dart';
+
+import '../../../core/error/failures.dart';
 import '../../entities/address.dart';
 import '../../repositories/address_repository.dart';
 
@@ -6,7 +9,7 @@ class UpdateAddressUseCase {
 
   UpdateAddressUseCase(this.repository);
 
-  Future<void> call(Address address) {
+  Future<Either<Failure, void>> call(Address address) {
     return repository.updateAddress(address);
   }
 }

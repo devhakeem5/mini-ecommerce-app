@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mini_commerce_app/core/localization/app_localizations.dart';
 
+import '../../../../core/di/service_locator.dart';
+import '../../../../domain/usecases/products/get_product_options_usecase.dart';
+import '../../../data/models/product_option_config.dart';
 import '../../../domain/entities/product.dart';
 import '../../cart/cubit/cart_cubit.dart';
 import '../../cart/pages/cart_page.dart';
@@ -13,7 +16,6 @@ import '../widgets/details_image_gallery.dart';
 import '../widgets/product_action_tile.dart';
 import '../widgets/product_bottom_bar.dart';
 import '../widgets/product_info_row.dart';
-import '../../../data/models/product_option_config.dart';
 import '../widgets/product_options_widget.dart';
 import '../widgets/related_products_section.dart';
 
@@ -42,7 +44,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
   @override
   void initState() {
     super.initState();
-    _optionConfig = _getProductOptions(widget.product.category);
+    _optionConfig = sl<GetProductOptionsUseCase>()(widget.product.category);
     _currentPrice = widget.product.price;
     _fadeController = AnimationController(vsync: this, duration: const Duration(milliseconds: 600));
     _fadeAnimation = CurvedAnimation(parent: _fadeController, curve: Curves.easeOut);
@@ -54,33 +56,6 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
     _fadeController.dispose();
     _visualCartController.dispose();
     super.dispose();
-  }
-
-  ProductOptionConfig _getProductOptions(String category) {
-    final c = category.toLowerCase();
-    if (c == 'womens-dresses' || c == 'mens-shirts') {
-      return ProductOptionConfig(label: 'Size', values: ['S', 'M', 'L', 'XL']);
-    } else if (c == 'womens-shoes') {
-      return ProductOptionConfig(label: 'Size', values: ['39', '40', '41', '42']);
-    } else if (c == 'fragrances') {
-      return ProductOptionConfig(label: 'Size', values: ['50ml', '100ml', '120ml']);
-    } else if (c == 'furniture') {
-      return ProductOptionConfig(label: 'Size', values: ['Small', 'Big']);
-    } else if (c == 'laptops') {
-      return ProductOptionConfig(
-        label: 'RAM',
-        values: ['16GB', '32GB', '64GB'],
-        priceModifiers: [0.0, 0.05, 0.10],
-      );
-    } else if (c == 'smartphones' || c == 'tablets') {
-      return ProductOptionConfig(
-        label: 'Storage',
-        values: ['32GB', '64GB', '128GB', '256GB'],
-        priceModifiers: [0.0, 0.05, 0.10, 0.15],
-      );
-    } else {
-      return ProductOptionConfig(label: 'Size', values: ['Small', 'Big']);
-    }
   }
 
   void _onOptionSelected(int index) {

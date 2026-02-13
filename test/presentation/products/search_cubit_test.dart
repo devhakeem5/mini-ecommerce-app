@@ -38,7 +38,7 @@ void main() {
     mockAddToSearchHistoryUseCase = MockAddToSearchHistoryUseCase();
     mockDeleteSearchHistoryUseCase = MockDeleteSearchHistoryUseCase();
 
-    when(() => mockGetSearchHistoryUseCase()).thenAnswer((_) async => []);
+    when(() => mockGetSearchHistoryUseCase()).thenAnswer((_) async => const Right([]));
 
     searchCubit = SearchCubit(
       searchProductsUseCase: mockSearchProductsUseCase,
@@ -67,8 +67,8 @@ void main() {
     availabilityStatus: 'In Stock',
   );
 
-  final tProductsResult = ProductsResult(products: [tProduct], isOffline: false);
-  final tLocalProductsResult = ProductsResult(products: [tProduct], isOffline: true);
+  const tProductsResult = ProductsResult(products: [tProduct], isOffline: false);
+  const tLocalProductsResult = ProductsResult(products: [tProduct], isOffline: true);
 
   group('SearchCubit', () {
     test('initial state is SearchInitial', () {
@@ -78,7 +78,7 @@ void main() {
     blocTest<SearchCubit, SearchState>(
       'emits [SearchHistoryLoaded] when loadHistory is called',
       build: () {
-        when(() => mockGetSearchHistoryUseCase()).thenAnswer((_) async => ['test']);
+        when(() => mockGetSearchHistoryUseCase()).thenAnswer((_) async => const Right(['test']));
         return searchCubit;
       },
       act: (cubit) => cubit.loadHistory(),
@@ -93,7 +93,7 @@ void main() {
     blocTest<SearchCubit, SearchState>(
       'emits [SearchLoading, SearchResultsLoaded] when search is successful',
       build: () {
-        when(() => mockAddToSearchHistoryUseCase(any())).thenAnswer((_) async {});
+        when(() => mockAddToSearchHistoryUseCase(any())).thenAnswer((_) async => const Right(null));
 
         when(
           () => mockSearchProductsLocallyUseCase(query: 'test'),
@@ -101,7 +101,7 @@ void main() {
 
         when(
           () => mockSearchProductsUseCase(query: 'test', limit: 20, skip: 0),
-        ).thenAnswer((_) => Stream.value(Right(tProductsResult)));
+        ).thenAnswer((_) => Stream.value(const Right(tProductsResult)));
         return searchCubit;
       },
       act: (cubit) => cubit.search('test'),
@@ -120,11 +120,11 @@ void main() {
     blocTest<SearchCubit, SearchState>(
       'emits local results immediately if found',
       build: () {
-        when(() => mockAddToSearchHistoryUseCase(any())).thenAnswer((_) async {});
+        when(() => mockAddToSearchHistoryUseCase(any())).thenAnswer((_) async => const Right(null));
 
         when(
           () => mockSearchProductsLocallyUseCase(query: 'test'),
-        ).thenAnswer((_) async => Right(tLocalProductsResult));
+        ).thenAnswer((_) async => const Right(tLocalProductsResult));
 
         when(
           () => mockSearchProductsUseCase(query: 'test', limit: 20, skip: 0),
@@ -141,8 +141,10 @@ void main() {
     blocTest<SearchCubit, SearchState>(
       'deleteHistoryItem removes item and updates state',
       build: () {
-        when(() => mockDeleteSearchHistoryUseCase('test')).thenAnswer((_) async {});
-        when(() => mockGetSearchHistoryUseCase()).thenAnswer((_) async => ['other']);
+        when(
+          () => mockDeleteSearchHistoryUseCase('test'),
+        ).thenAnswer((_) async => const Right(null));
+        when(() => mockGetSearchHistoryUseCase()).thenAnswer((_) async => const Right(['other']));
         searchCubit.emit(
           const SearchHistoryLoaded(history: ['test', 'other'], suggestions: ['test']),
         );

@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mini_commerce_app/core/localization/app_localizations.dart';
 
+import '../../../core/di/service_locator.dart';
 import '../../../domain/entities/product.dart';
+import '../../../domain/usecases/products/filter_related_products_usecase.dart';
 import '../cubit/products_cubit.dart';
 import '../cubit/products_state.dart';
 import 'product_card.dart';
@@ -20,24 +22,7 @@ class RelatedProductsSection extends StatelessWidget {
 
         final allProducts = state.products;
 
-        List<Product> related = [];
-        if (product.brand.isNotEmpty && product.brand.toLowerCase() != 'no brand') {
-          related = allProducts
-              .where(
-                (p) => p.id != product.id && p.brand.toLowerCase() == product.brand.toLowerCase(),
-              )
-              .toList();
-        }
-
-        if (related.isEmpty) {
-          related = allProducts
-              .where(
-                (p) =>
-                    p.id != product.id &&
-                    p.category.toLowerCase() == product.category.toLowerCase(),
-              )
-              .toList();
-        }
+        final related = sl<FilterRelatedProductsUseCase>()(product, allProducts);
 
         if (related.isEmpty) return const SizedBox.shrink();
 

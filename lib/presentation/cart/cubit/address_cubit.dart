@@ -19,13 +19,15 @@ class AddressCubit extends Cubit<AddressState> {
 
   Future<void> loadAddresses() async {
     emit(const AddressLoading());
-    try {
-      final addresses = await getAddressesUseCase();
-      final defaultAddr = addresses.firstWhere((a) => a.isDefault, orElse: () => addresses.first);
-      emit(AddressLoaded(addresses: addresses, selectedAddress: defaultAddr));
-    } catch (e) {
-      emit(AddressError('Failed to load addresses: $e'));
-    }
+    final result = await getAddressesUseCase();
+    result.fold((failure) => emit(AddressError(failure.message)), (addresses) {
+      if (addresses.isEmpty) {
+        emit(const AddressLoaded(addresses: []));
+      } else {
+        final defaultAddr = addresses.firstWhere((a) => a.isDefault, orElse: () => addresses.first);
+        emit(AddressLoaded(addresses: addresses, selectedAddress: defaultAddr));
+      }
+    });
   }
 
   void selectAddress(Address address) {
@@ -36,20 +38,12 @@ class AddressCubit extends Cubit<AddressState> {
   }
 
   Future<void> addAddress(Address address) async {
-    try {
-      await addAddressUseCase(address);
-      await loadAddresses();
-    } catch (e) {
-      emit(AddressError('Failed to add address: $e'));
-    }
+    final result = await addAddressUseCase(address);
+    result.fold((failure) => emit(AddressError(failure.message)), (_) => loadAddresses());
   }
 
   Future<void> updateAddress(Address address) async {
-    try {
-      await updateAddressUseCase(address);
-      await loadAddresses();
-    } catch (e) {
-      emit(AddressError('Failed to update address: $e'));
-    }
+    final result = await updateAddressUseCase(address);
+    result.fold((failure) => emit(AddressError(failure.message)), (_) => loadAddresses());
   }
 }

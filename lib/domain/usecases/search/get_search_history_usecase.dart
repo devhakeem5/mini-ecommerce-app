@@ -1,3 +1,6 @@
+import 'package:dartz/dartz.dart';
+
+import '../../../core/error/failures.dart';
 import '../../repositories/search_history_repository.dart';
 
 class GetSearchHistoryUseCase {
@@ -5,7 +8,7 @@ class GetSearchHistoryUseCase {
 
   GetSearchHistoryUseCase(this.repository);
 
-  Future<List<String>> call() {
+  Future<Either<Failure, List<String>>> call() {
     return repository.getSearchHistory();
   }
 }

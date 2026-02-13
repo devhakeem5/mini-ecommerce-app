@@ -1,3 +1,6 @@
+import 'package:dartz/dartz.dart';
+
+import '../../../core/error/failures.dart';
 import '../../repositories/search_history_repository.dart';
 
 class AddToSearchHistoryUseCase {
@@ -5,7 +8,7 @@ class AddToSearchHistoryUseCase {
 
   AddToSearchHistoryUseCase(this.repository);
 
-  Future<void> call(String query) {
+  Future<Either<Failure, void>> call(String query) {
     return repository.addToHistory(query);
   }
 }

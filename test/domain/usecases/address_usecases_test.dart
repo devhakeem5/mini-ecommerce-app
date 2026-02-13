@@ -1,3 +1,4 @@
+import 'package:dartz/dartz.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mini_commerce_app/domain/entities/address.dart';
 import 'package:mini_commerce_app/domain/repositories/address_repository.dart';
@@ -30,10 +31,11 @@ void main() {
     });
 
     test('delegates to repository.addAddress', () async {
-      when(() => mockRepository.addAddress(tAddress)).thenAnswer((_) async {});
+      when(() => mockRepository.addAddress(tAddress)).thenAnswer((_) async => const Right(null));
 
-      await useCase(tAddress);
+      final result = await useCase(tAddress);
 
+      expect(result, const Right(null));
       verify(() => mockRepository.addAddress(tAddress)).called(1);
     });
   });
@@ -46,20 +48,20 @@ void main() {
     });
 
     test('delegates to repository.getAddresses', () async {
-      when(() => mockRepository.getAddresses()).thenAnswer((_) async => [tAddress]);
+      when(() => mockRepository.getAddresses()).thenAnswer((_) async => const Right([tAddress]));
 
       final result = await useCase();
 
-      expect(result, [tAddress]);
+      expect(result, const Right([tAddress]));
       verify(() => mockRepository.getAddresses()).called(1);
     });
 
     test('returns empty list when no addresses', () async {
-      when(() => mockRepository.getAddresses()).thenAnswer((_) async => []);
+      when(() => mockRepository.getAddresses()).thenAnswer((_) async => const Right(<Address>[]));
 
       final result = await useCase();
 
-      expect(result, isEmpty);
+      expect(result, const Right(<Address>[]));
     });
   });
 
@@ -71,10 +73,11 @@ void main() {
     });
 
     test('delegates to repository.updateAddress', () async {
-      when(() => mockRepository.updateAddress(tAddress)).thenAnswer((_) async {});
+      when(() => mockRepository.updateAddress(tAddress)).thenAnswer((_) async => const Right(null));
 
-      await useCase(tAddress);
+      final result = await useCase(tAddress);
 
+      expect(result, const Right(null));
       verify(() => mockRepository.updateAddress(tAddress)).called(1);
     });
   });
@@ -87,10 +90,11 @@ void main() {
     });
 
     test('delegates to repository.seedDefaultAddresses', () async {
-      when(() => mockRepository.seedDefaultAddresses()).thenAnswer((_) async {});
+      when(() => mockRepository.seedDefaultAddresses()).thenAnswer((_) async => const Right(null));
 
-      await useCase();
+      final result = await useCase();
 
+      expect(result, const Right(null));
       verify(() => mockRepository.seedDefaultAddresses()).called(1);
     });
   });

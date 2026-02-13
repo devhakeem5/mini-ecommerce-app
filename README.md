@@ -17,7 +17,7 @@ A production-style Flutter mini commerce app focused on **offline-first data con
 | **Search Integrity** | 500ms debounce with local-first strategy. Search ID versioning (`_searchId`) prevents stale API responses from overwriting newer results (race condition protection). |
 | **Functional Error Model** | `dartz` `Either<Failure, T>` across all repository boundaries. Three failure types: `ServerFailure`, `CacheFailure`, `NetworkFailure`. No unchecked exceptions cross layer boundaries. |
 | **Price Synchronization** | Non-destructive synchronization ensures cart state remains visible during product refresh cycles. Only changed prices are persisted to Hive and re-emitted to UI. |
-| **Layout Stability** | Skeleton loaders (Shimmer) used to preserve layout stability during async data fetches and prevent visual jumps. |
+| **Logic Separation** | UI components depend strictly on Domain Layer UseCases for business logic (e.g., product filtering, option configuration). No business logic leaks into Widgets or Pages. |
 
 ---
 

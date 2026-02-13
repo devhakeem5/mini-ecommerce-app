@@ -6,7 +6,6 @@ import 'package:mini_commerce_app/data/repositories/cart_repository_impl.dart';
 import 'package:mini_commerce_app/data/repositories/category_repository_impl.dart';
 import 'package:mini_commerce_app/data/repositories/user_repository_impl.dart';
 import 'package:mini_commerce_app/domain/repositories/cart_repository.dart';
-import 'package:mini_commerce_app/domain/repositories/category_repository.dart';
 import 'package:mini_commerce_app/domain/repositories/user_repository.dart';
 import 'package:mini_commerce_app/presentation/cart/cubit/cart_cubit.dart';
 import 'package:mini_commerce_app/presentation/profile/cubit/locale_cubit.dart';
@@ -44,6 +43,9 @@ import '../../domain/usecases/cart/update_cart_prices_usecase.dart';
 import '../../domain/usecases/cart/update_cart_quantity_usecase.dart';
 import '../../domain/usecases/locale/get_locale_usecase.dart';
 import '../../domain/usecases/locale/set_locale_usecase.dart';
+import '../../domain/usecases/products/filter_recommended_products_usecase.dart';
+import '../../domain/usecases/products/filter_related_products_usecase.dart';
+import '../../domain/usecases/products/get_product_options_usecase.dart';
 import '../../domain/usecases/search/add_to_search_history_usecase.dart';
 import '../../domain/usecases/search/delete_search_history_usecase.dart';
 import '../../domain/usecases/search/get_search_history_usecase.dart';
@@ -87,7 +89,12 @@ Future<void> setupDependencies() async {
   sl.registerLazySingleton(() => GetCategoriesUseCase(sl()));
   sl.registerLazySingleton(() => GetProductsByCategoryUseCase(sl()));
   sl.registerLazySingleton(() => SearchProductsUseCase(sl()));
+  sl.registerLazySingleton(() => SearchProductsUseCase(sl()));
   sl.registerLazySingleton(() => SearchProductsLocallyUseCase(sl()));
+
+  sl.registerLazySingleton(() => GetProductOptionsUseCase());
+  sl.registerLazySingleton(() => FilterRelatedProductsUseCase());
+  sl.registerLazySingleton(() => FilterRecommendedProductsUseCase());
 
   sl.registerLazySingleton(() => LoadCartUseCase(sl()));
   sl.registerLazySingleton(() => AddToCartUseCase(sl()));

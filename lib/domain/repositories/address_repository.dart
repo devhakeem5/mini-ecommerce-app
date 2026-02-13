@@ -1,8 +1,11 @@
+import 'package:dartz/dartz.dart';
+
+import '../../core/error/failures.dart';
 import '../entities/address.dart';
 
 abstract class AddressRepository {
-  Future<List<Address>> getAddresses();
-  Future<void> addAddress(Address address);
-  Future<void> updateAddress(Address address);
-  Future<void> seedDefaultAddresses();
+  Future<Either<Failure, List<Address>>> getAddresses();
+  Future<Either<Failure, void>> addAddress(Address address);
+  Future<Either<Failure, void>> updateAddress(Address address);
+  Future<Either<Failure, void>> seedDefaultAddresses();
 }

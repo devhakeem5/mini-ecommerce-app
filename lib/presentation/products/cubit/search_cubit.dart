@@ -33,7 +33,8 @@ class SearchCubit extends Cubit<SearchState> {
   }) : super(SearchInitial());
 
   Future<void> loadHistory() async {
-    _fullHistory = await getSearchHistoryUseCase();
+    final result = await getSearchHistoryUseCase();
+    result.fold((failure) => _fullHistory = [], (history) => _fullHistory = history);
     emit(SearchHistoryLoaded(history: _fullHistory));
   }
 
@@ -68,7 +69,8 @@ class SearchCubit extends Cubit<SearchState> {
     emit(SearchLoading());
 
     await addToSearchHistoryUseCase(query);
-    _fullHistory = await getSearchHistoryUseCase();
+    final historyResult = await getSearchHistoryUseCase();
+    historyResult.fold((l) {}, (r) => _fullHistory = r);
 
     if (currentSearchId != _searchId) return;
 
@@ -171,7 +173,9 @@ class SearchCubit extends Cubit<SearchState> {
 
   Future<void> deleteHistoryItem(String query) async {
     await deleteSearchHistoryUseCase(query);
-    _fullHistory = await getSearchHistoryUseCase();
+    final historyResult = await getSearchHistoryUseCase();
+    historyResult.fold((l) {}, (r) => _fullHistory = r);
+
     if (state is SearchHistoryLoaded) {
       final currentState = state as SearchHistoryLoaded;
       final suggestions = currentState.suggestions.where((e) => e != query).toList();
