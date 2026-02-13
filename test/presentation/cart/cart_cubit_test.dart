@@ -150,5 +150,142 @@ void main() {
         verify(() => mockUpdateCartQuantityUseCase(productId: tProduct.id, quantity: 2)).called(1);
       },
     );
+
+    blocTest<CartCubit, CartState>(
+      'emits [CartLoaded(empty)] when clearCart is successful',
+      build: () {
+        when(() => mockClearCartUseCase()).thenAnswer((_) async {});
+        return cartCubit;
+      },
+      act: (cubit) => cubit.clearCart(),
+      expect: () => [const CartLoaded(cart: Cart(items: []))],
+      verify: (_) {
+        verify(() => mockClearCartUseCase()).called(1);
+      },
+    );
+
+    blocTest<CartCubit, CartState>(
+      'emits [CartLoaded] when removeItem is successful',
+      build: () {
+        when(() => mockRemoveFromCartUseCase(tProduct.id)).thenAnswer((_) async {});
+        when(() => mockLoadCartUseCase()).thenAnswer((_) async => []);
+        return cartCubit;
+      },
+      act: (cubit) => cubit.removeItem(tProduct.id),
+      expect: () => [const CartLoaded(cart: Cart(items: []))],
+      verify: (_) {
+        verify(() => mockRemoveFromCartUseCase(tProduct.id)).called(1);
+      },
+    );
+
+    blocTest<CartCubit, CartState>(
+      'emits [CartLoaded] when undoRemoveItem restores item with quantity 1',
+      build: () {
+        when(() => mockAddToCartUseCase(tProduct)).thenAnswer((_) async {});
+        when(() => mockLoadCartUseCase()).thenAnswer((_) async => tCartItems);
+        return cartCubit;
+      },
+      act: (cubit) => cubit.undoRemoveItem(tCartItem),
+      expect: () => [CartLoaded(cart: Cart(items: tCartItems))],
+      verify: (_) {
+        verify(() => mockAddToCartUseCase(tProduct)).called(1);
+        verifyNever(
+          () => mockUpdateCartQuantityUseCase(
+            productId: any(named: 'productId'),
+            quantity: any(named: 'quantity'),
+          ),
+        );
+      },
+    );
+
+    blocTest<CartCubit, CartState>(
+      'emits [CartLoaded] when undoRemoveItem restores item with quantity > 1',
+      build: () {
+        final tMultiItem = CartItem(product: tProduct, quantity: 3);
+        when(() => mockAddToCartUseCase(tProduct)).thenAnswer((_) async {});
+        when(
+          () => mockUpdateCartQuantityUseCase(productId: tProduct.id, quantity: 3),
+        ).thenAnswer((_) async {});
+        when(() => mockLoadCartUseCase()).thenAnswer((_) async => [tMultiItem]);
+        return cartCubit;
+      },
+      act: (cubit) => cubit.undoRemoveItem(CartItem(product: tProduct, quantity: 3)),
+      expect: () => [
+        CartLoaded(
+          cart: Cart(items: [CartItem(product: tProduct, quantity: 3)]),
+        ),
+      ],
+      verify: (_) {
+        verify(() => mockAddToCartUseCase(tProduct)).called(1);
+        verify(() => mockUpdateCartQuantityUseCase(productId: tProduct.id, quantity: 3)).called(1);
+      },
+    );
+
+    blocTest<CartCubit, CartState>(
+      'emits [CartLoading, CartError] when loadCart throws',
+      build: () {
+        when(() => mockLoadCartUseCase()).thenThrow(Exception('DB error'));
+        return cartCubit;
+      },
+      act: (cubit) => cubit.loadCart(),
+      expect: () => [const CartLoading(), isA<CartError>()],
+    );
+
+    blocTest<CartCubit, CartState>(
+      'emits [CartError] when addToCart throws',
+      build: () {
+        when(() => mockAddToCartUseCase(tProduct)).thenThrow(Exception('Write error'));
+        return cartCubit;
+      },
+      act: (cubit) => cubit.addToCart(tProduct),
+      expect: () => [isA<CartError>()],
+    );
+
+    blocTest<CartCubit, CartState>(
+      'emits [CartError] when clearCart throws',
+      build: () {
+        when(() => mockClearCartUseCase()).thenThrow(Exception('Clear error'));
+        return cartCubit;
+      },
+      act: (cubit) => cubit.clearCart(),
+      expect: () => [isA<CartError>()],
+    );
+
+    blocTest<CartCubit, CartState>(
+      'syncPrices does nothing when state is not CartLoaded',
+      build: () => cartCubit,
+      act: (cubit) => cubit.syncPrices([tProduct]),
+      expect: () => [],
+    );
+
+    blocTest<CartCubit, CartState>(
+      'syncPrices updates prices and reloads cart',
+      build: () {
+        const updatedProduct = Product(
+          id: 1,
+          title: 'Test Product',
+          description: 'Desc',
+          brand: 'Brand',
+          category: 'Category',
+          price: 90.0,
+          discountPercentage: 0.0,
+          rating: 4.5,
+          thumbnail: 'url',
+          images: [],
+          availabilityStatus: 'In Stock',
+        );
+        final updatedItems = [CartItem(product: updatedProduct, quantity: 1)];
+        when(() => mockUpdateCartPricesUseCase([tProduct])).thenAnswer((_) async {});
+        when(() => mockLoadCartUseCase()).thenAnswer((_) async => updatedItems);
+        return cartCubit;
+      },
+      seed: () => CartLoaded(cart: Cart(items: tCartItems)),
+      act: (cubit) => cubit.syncPrices([tProduct]),
+      expect: () => [isA<CartLoaded>()],
+      verify: (_) {
+        verify(() => mockUpdateCartPricesUseCase([tProduct])).called(1);
+        verify(() => mockLoadCartUseCase()).called(1);
+      },
+    );
   });
 }

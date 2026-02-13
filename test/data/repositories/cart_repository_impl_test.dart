@@ -65,5 +65,103 @@ void main() {
       expect(result.first.product.id, tProduct.id);
       expect(result.first.quantity, 1);
     });
+
+    test('should return empty list when cart is empty', () async {
+      when(() => mockLocalDataSource.loadCart()).thenAnswer((_) async => []);
+
+      final result = await repository.loadCart();
+
+      expect(result, isEmpty);
+    });
+
+    test('should increment quantity when adding existing product', () async {
+      final tExistingCartMap = {
+        'product': {
+          'id': 1,
+          'title': 'Test Product',
+          'description': 'Desc',
+          'brand': 'Brand',
+          'category': 'Category',
+          'price': 100.0,
+          'discountPercentage': 0.0,
+          'rating': 4.5,
+          'thumbnail': 'url',
+          'images': [],
+          'availabilityStatus': 'In Stock',
+        },
+        'quantity': 1,
+      };
+      when(() => mockLocalDataSource.loadCart()).thenAnswer((_) async => [tExistingCartMap]);
+      when(() => mockLocalDataSource.saveCart(any())).thenAnswer((_) async {});
+
+      await repository.addToCart(tProduct);
+
+      final captured =
+          verify(() => mockLocalDataSource.saveCart(captureAny())).captured.single as List;
+      expect(captured.length, 1);
+      expect(captured.first['quantity'], 2);
+    });
+
+    test('should update quantity for existing item', () async {
+      final tCartMap = {
+        'product': {
+          'id': 1,
+          'title': 'Test Product',
+          'description': 'Desc',
+          'brand': 'Brand',
+          'category': 'Category',
+          'price': 100.0,
+          'discountPercentage': 0.0,
+          'rating': 4.5,
+          'thumbnail': 'url',
+          'images': [],
+          'availabilityStatus': 'In Stock',
+        },
+        'quantity': 1,
+      };
+      when(() => mockLocalDataSource.loadCart()).thenAnswer((_) async => [tCartMap]);
+      when(() => mockLocalDataSource.saveCart(any())).thenAnswer((_) async {});
+
+      await repository.updateQuantity(productId: 1, quantity: 5);
+
+      final captured =
+          verify(() => mockLocalDataSource.saveCart(captureAny())).captured.single as List;
+      expect(captured.first['quantity'], 5);
+    });
+
+    test('should remove item from cart', () async {
+      final tCartMap = {
+        'product': {
+          'id': 1,
+          'title': 'Test Product',
+          'description': 'Desc',
+          'brand': 'Brand',
+          'category': 'Category',
+          'price': 100.0,
+          'discountPercentage': 0.0,
+          'rating': 4.5,
+          'thumbnail': 'url',
+          'images': [],
+          'availabilityStatus': 'In Stock',
+        },
+        'quantity': 1,
+      };
+      when(() => mockLocalDataSource.loadCart()).thenAnswer((_) async => [tCartMap]);
+      when(() => mockLocalDataSource.saveCart(any())).thenAnswer((_) async {});
+
+      await repository.removeFromCart(1);
+
+      final captured =
+          verify(() => mockLocalDataSource.saveCart(captureAny())).captured.single as List;
+      expect(captured, isEmpty);
+    });
+
+    test('should clear cart', () async {
+      when(() => mockLocalDataSource.clearCart()).thenAnswer((_) async {});
+
+      await repository.clearCart();
+
+      verify(() => mockLocalDataSource.clearCart()).called(1);
+    });
   });
 }

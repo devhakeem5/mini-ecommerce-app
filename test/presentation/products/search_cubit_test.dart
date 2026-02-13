@@ -137,5 +137,39 @@ void main() {
         SearchResultsLoaded(products: [tProduct], isOffline: true),
       ],
     );
+
+    blocTest<SearchCubit, SearchState>(
+      'deleteHistoryItem removes item and updates state',
+      build: () {
+        when(() => mockDeleteSearchHistoryUseCase('test')).thenAnswer((_) async {});
+        when(() => mockGetSearchHistoryUseCase()).thenAnswer((_) async => ['other']);
+        searchCubit.emit(
+          const SearchHistoryLoaded(history: ['test', 'other'], suggestions: ['test']),
+        );
+        return searchCubit;
+      },
+      act: (cubit) => cubit.deleteHistoryItem('test'),
+      expect: () => [
+        const SearchHistoryLoaded(history: ['other'], suggestions: []),
+      ],
+      verify: (_) {
+        verify(() => mockDeleteSearchHistoryUseCase('test')).called(1);
+      },
+    );
+
+    test('search with empty query does nothing', () async {
+      await searchCubit.search('');
+      expect(searchCubit.state, isA<SearchInitial>());
+    });
+
+    blocTest<SearchCubit, SearchState>(
+      'onSearchChanged with empty query resets to history',
+      build: () {
+        return searchCubit;
+      },
+      seed: () => const SearchHistoryLoaded(history: ['prev']),
+      act: (cubit) => cubit.onSearchChanged(''),
+      expect: () => [isA<SearchHistoryLoaded>()],
+    );
   });
 }

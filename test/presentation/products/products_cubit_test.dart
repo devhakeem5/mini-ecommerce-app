@@ -74,5 +74,80 @@ void main() {
       act: (cubit) => cubit.loadInitialProducts(),
       expect: () => [const ProductsLoading(), const ProductsError(message: 'Error')],
     );
+
+    blocTest<ProductsCubit, ProductsState>(
+      'loadMoreProducts appends new products to existing list',
+      build: () {
+        const tProduct2 = Product(
+          id: 20,
+          title: 'Product 2',
+          description: 'Desc',
+          brand: 'Brand',
+          category: 'Category',
+          price: 200.0,
+          discountPercentage: 0.0,
+          rating: 3.0,
+          thumbnail: 'url2',
+          images: [],
+          availabilityStatus: 'In Stock',
+        );
+        // Create a full page of 20 products with distinct IDs (0-19)
+        final initialProducts = List.generate(
+          20,
+          (i) => Product(
+            id: i,
+            title: 'P$i',
+            description: '',
+            brand: '',
+            category: '',
+            price: 10.0,
+            discountPercentage: 0,
+            rating: 0,
+            thumbnail: '',
+            images: [],
+            availabilityStatus: '',
+          ),
+        );
+        when(() => mockGetProductsUseCase(limit: 20, skip: 20)).thenAnswer(
+          (_) => Stream.value(Right(ProductsResult(products: [tProduct2], isOffline: false))),
+        );
+
+        productsCubit.emit(
+          ProductsLoaded(products: initialProducts, isOffline: false, hasReachedMax: false),
+        );
+        return productsCubit;
+      },
+      act: (cubit) => cubit.loadMoreProducts(),
+      expect: () => [isA<ProductsLoaded>()],
+      verify: (_) {
+        final state = productsCubit.state as ProductsLoaded;
+        expect(state.products.length, 21);
+        expect(state.hasReachedMax, true);
+      },
+    );
+
+    blocTest<ProductsCubit, ProductsState>(
+      'loadMoreProducts does nothing when hasReachedMax is true',
+      build: () {
+        productsCubit.emit(
+          const ProductsLoaded(products: [tProduct], isOffline: false, hasReachedMax: true),
+        );
+        return productsCubit;
+      },
+      act: (cubit) => cubit.loadMoreProducts(),
+      expect: () => [],
+    );
+
+    blocTest<ProductsCubit, ProductsState>(
+      'emits ProductsError with no_internet_no_data when offline and empty cache',
+      build: () {
+        when(() => mockGetProductsUseCase(limit: 20, skip: 0)).thenAnswer(
+          (_) => Stream.value(const Right(ProductsResult(products: [], isOffline: true))),
+        );
+        return productsCubit;
+      },
+      act: (cubit) => cubit.loadInitialProducts(),
+      expect: () => [const ProductsLoading(), const ProductsError(message: 'no_internet_no_data')],
+    );
   });
 }
