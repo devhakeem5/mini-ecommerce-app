@@ -1,3 +1,6 @@
+import 'package:dartz/dartz.dart';
+
+import '../../../core/error/failures.dart';
 import '../../entities/product.dart';
 import '../../repositories/cart_repository.dart';
 
@@ -6,7 +9,7 @@ class UpdateCartPricesUseCase {
 
   UpdateCartPricesUseCase(this.repository);
 
-  Future<void> call(List<Product> products) {
+  Future<Either<Failure, void>> call(List<Product> products) {
     return repository.updateProductPrices(products);
   }
 }

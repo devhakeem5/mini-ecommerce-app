@@ -30,22 +30,22 @@ class CartCubit extends Cubit<CartState> {
 
   Future<void> loadCart() async {
     emit(const CartLoading());
-    try {
-      final items = await loadCartUseCase();
-      emit(CartLoaded(cart: Cart(items: items)));
-    } catch (e) {
-      emit(CartError('Failed to load cart: $e'));
-    }
+    final result = await loadCartUseCase();
+    result.fold(
+      (failure) => emit(CartError(failure.message)),
+      (items) => emit(CartLoaded(cart: Cart(items: items))),
+    );
   }
 
   Future<void> addToCart(Product product) async {
-    try {
-      await addToCartUseCase(product);
-      final items = await loadCartUseCase();
-      emit(CartLoaded(cart: Cart(items: items)));
-    } catch (e) {
-      emit(CartError('Failed to add item: $e'));
-    }
+    final addResult = await addToCartUseCase(product);
+    addResult.fold((failure) => emit(CartError(failure.message)), (_) async {
+      final loadResult = await loadCartUseCase();
+      loadResult.fold(
+        (failure) => emit(CartError(failure.message)),
+        (items) => emit(CartLoaded(cart: Cart(items: items))),
+      );
+    });
   }
 
   Future<void> increment(int productId) async {
@@ -53,13 +53,17 @@ class CartCubit extends Cubit<CartState> {
     final currentItems = (state as CartLoaded).items;
     final item = currentItems.firstWhere((e) => e.product.id == productId);
 
-    try {
-      await updateCartQuantityUseCase(productId: productId, quantity: item.quantity + 1);
-      final items = await loadCartUseCase();
-      emit(CartLoaded(cart: Cart(items: items)));
-    } catch (e) {
-      emit(CartError('Failed to update quantity: $e'));
-    }
+    final updateResult = await updateCartQuantityUseCase(
+      productId: productId,
+      quantity: item.quantity + 1,
+    );
+    updateResult.fold((failure) => emit(CartError(failure.message)), (_) async {
+      final loadResult = await loadCartUseCase();
+      loadResult.fold(
+        (failure) => emit(CartError(failure.message)),
+        (items) => emit(CartLoaded(cart: Cart(items: items))),
+      );
+    });
   }
 
   Future<void> decrement(int productId) async {
@@ -67,61 +71,72 @@ class CartCubit extends Cubit<CartState> {
     final currentItems = (state as CartLoaded).items;
     final item = currentItems.firstWhere((e) => e.product.id == productId);
 
-    try {
-      if (item.quantity <= 1) {
-        await removeFromCartUseCase(productId);
-      } else {
-        await updateCartQuantityUseCase(productId: productId, quantity: item.quantity - 1);
-      }
-      final items = await loadCartUseCase();
-      emit(CartLoaded(cart: Cart(items: items)));
-    } catch (e) {
-      emit(CartError('Failed to update quantity: $e'));
+    if (item.quantity <= 1) {
+      final removeResult = await removeFromCartUseCase(productId);
+      removeResult.fold((failure) => emit(CartError(failure.message)), (_) async {
+        final loadResult = await loadCartUseCase();
+        loadResult.fold(
+          (failure) => emit(CartError(failure.message)),
+          (items) => emit(CartLoaded(cart: Cart(items: items))),
+        );
+      });
+    } else {
+      final updateResult = await updateCartQuantityUseCase(
+        productId: productId,
+        quantity: item.quantity - 1,
+      );
+      updateResult.fold((failure) => emit(CartError(failure.message)), (_) async {
+        final loadResult = await loadCartUseCase();
+        loadResult.fold(
+          (failure) => emit(CartError(failure.message)),
+          (items) => emit(CartLoaded(cart: Cart(items: items))),
+        );
+      });
     }
   }
 
   Future<void> removeItem(int productId) async {
-    try {
-      await removeFromCartUseCase(productId);
-      final items = await loadCartUseCase();
-      emit(CartLoaded(cart: Cart(items: items)));
-    } catch (e) {
-      emit(CartError('Failed to remove item: $e'));
-    }
+    final removeResult = await removeFromCartUseCase(productId);
+    removeResult.fold((failure) => emit(CartError(failure.message)), (_) async {
+      final loadResult = await loadCartUseCase();
+      loadResult.fold(
+        (failure) => emit(CartError(failure.message)),
+        (items) => emit(CartLoaded(cart: Cart(items: items))),
+      );
+    });
   }
 
   Future<void> undoRemoveItem(CartItem item) async {
-    try {
-      await addToCartUseCase(item.product);
+    final addResult = await addToCartUseCase(item.product);
+    addResult.fold((failure) => emit(CartError(failure.message)), (_) async {
       if (item.quantity > 1) {
         await updateCartQuantityUseCase(productId: item.product.id, quantity: item.quantity);
       }
-      final items = await loadCartUseCase();
-      emit(CartLoaded(cart: Cart(items: items)));
-    } catch (e) {
-      emit(CartError('Failed to undo removal: $e'));
-    }
+      final loadResult = await loadCartUseCase();
+      loadResult.fold(
+        (failure) => emit(CartError(failure.message)),
+        (items) => emit(CartLoaded(cart: Cart(items: items))),
+      );
+    });
   }
 
   Future<void> clearCart() async {
-    try {
-      await clearCartUseCase();
-      emit(const CartLoaded(cart: Cart(items: [])));
-    } catch (e) {
-      emit(CartError('Failed to clear cart: $e'));
-    }
+    final result = await clearCartUseCase();
+    result.fold(
+      (failure) => emit(CartError(failure.message)),
+      (_) => emit(const CartLoaded(cart: Cart(items: []))),
+    );
   }
 
   Future<void> syncPrices(List<Product> latestProducts) async {
     if (state is! CartLoaded) return;
 
-    try {
-      await updateCartPricesUseCase(latestProducts);
-
+    final updateResult = await updateCartPricesUseCase(latestProducts);
+    updateResult.fold((_) {}, (_) async {
       if (!isClosed) {
-        final items = await loadCartUseCase();
-        emit(CartLoaded(cart: Cart(items: items)));
+        final loadResult = await loadCartUseCase();
+        loadResult.fold((_) {}, (items) => emit(CartLoaded(cart: Cart(items: items))));
       }
-    } catch (e) {}
+    });
   }
 }

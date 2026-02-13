@@ -1,4 +1,6 @@
+import 'package:dartz/dartz.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mini_commerce_app/core/error/failures.dart';
 import 'package:mini_commerce_app/domain/entities/cart_item.dart';
 import 'package:mini_commerce_app/domain/entities/product.dart';
 import 'package:mini_commerce_app/domain/repositories/cart_repository.dart';
@@ -40,11 +42,20 @@ void main() {
       useCase = AddToCartUseCase(mockRepository);
     });
 
-    test('delegates to repository.addToCart', () async {
-      when(() => mockRepository.addToCart(tProduct)).thenAnswer((_) async {});
-      await useCase(tProduct);
+    test('delegates to repository.addToCart and returns Right on success', () async {
+      when(() => mockRepository.addToCart(tProduct)).thenAnswer((_) async => const Right(null));
+      final result = await useCase(tProduct);
+      expect(result, const Right(null));
       verify(() => mockRepository.addToCart(tProduct)).called(1);
       verifyNoMoreInteractions(mockRepository);
+    });
+
+    test('returns Left on failure', () async {
+      when(
+        () => mockRepository.addToCart(tProduct),
+      ).thenAnswer((_) async => const Left(CacheFailure()));
+      final result = await useCase(tProduct);
+      expect(result, const Left(CacheFailure()));
     });
   });
 
@@ -55,14 +66,20 @@ void main() {
       useCase = LoadCartUseCase(mockRepository);
     });
 
-    test('delegates to repository.loadCart and returns items', () async {
+    test('delegates to repository.loadCart and returns Right with items', () async {
       final tItems = [CartItem(product: tProduct, quantity: 1)];
-      when(() => mockRepository.loadCart()).thenAnswer((_) async => tItems);
+      when(() => mockRepository.loadCart()).thenAnswer((_) async => Right(tItems));
 
       final result = await useCase();
 
-      expect(result, tItems);
+      expect(result, Right(tItems));
       verify(() => mockRepository.loadCart()).called(1);
+    });
+
+    test('returns Left on failure', () async {
+      when(() => mockRepository.loadCart()).thenAnswer((_) async => const Left(CacheFailure()));
+      final result = await useCase();
+      expect(result, const Left(CacheFailure()));
     });
   });
 
@@ -73,9 +90,10 @@ void main() {
       useCase = RemoveFromCartUseCase(mockRepository);
     });
 
-    test('delegates to repository.removeFromCart', () async {
-      when(() => mockRepository.removeFromCart(1)).thenAnswer((_) async {});
-      await useCase(1);
+    test('delegates to repository.removeFromCart and returns Right', () async {
+      when(() => mockRepository.removeFromCart(1)).thenAnswer((_) async => const Right(null));
+      final result = await useCase(1);
+      expect(result, const Right(null));
       verify(() => mockRepository.removeFromCart(1)).called(1);
     });
   });
@@ -87,9 +105,10 @@ void main() {
       useCase = ClearCartUseCase(mockRepository);
     });
 
-    test('delegates to repository.clearCart', () async {
-      when(() => mockRepository.clearCart()).thenAnswer((_) async {});
-      await useCase();
+    test('delegates to repository.clearCart and returns Right', () async {
+      when(() => mockRepository.clearCart()).thenAnswer((_) async => const Right(null));
+      final result = await useCase();
+      expect(result, const Right(null));
       verify(() => mockRepository.clearCart()).called(1);
     });
   });
@@ -101,9 +120,12 @@ void main() {
       useCase = UpdateCartQuantityUseCase(mockRepository);
     });
 
-    test('delegates to repository.updateQuantity', () async {
-      when(() => mockRepository.updateQuantity(productId: 1, quantity: 3)).thenAnswer((_) async {});
-      await useCase(productId: 1, quantity: 3);
+    test('delegates to repository.updateQuantity and returns Right', () async {
+      when(
+        () => mockRepository.updateQuantity(productId: 1, quantity: 3),
+      ).thenAnswer((_) async => const Right(null));
+      final result = await useCase(productId: 1, quantity: 3);
+      expect(result, const Right(null));
       verify(() => mockRepository.updateQuantity(productId: 1, quantity: 3)).called(1);
     });
   });
@@ -115,9 +137,12 @@ void main() {
       useCase = UpdateCartPricesUseCase(mockRepository);
     });
 
-    test('delegates to repository.updateProductPrices', () async {
-      when(() => mockRepository.updateProductPrices([tProduct])).thenAnswer((_) async {});
-      await useCase([tProduct]);
+    test('delegates to repository.updateProductPrices and returns Right', () async {
+      when(
+        () => mockRepository.updateProductPrices([tProduct]),
+      ).thenAnswer((_) async => const Right(null));
+      final result = await useCase([tProduct]);
+      expect(result, const Right(null));
       verify(() => mockRepository.updateProductPrices([tProduct])).called(1);
     });
   });

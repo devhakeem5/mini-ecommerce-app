@@ -1,3 +1,6 @@
+import 'package:dartz/dartz.dart';
+
+import '../../../core/error/failures.dart';
 import '../../repositories/cart_repository.dart';
 
 class RemoveFromCartUseCase {
@@ -5,7 +8,7 @@ class RemoveFromCartUseCase {
 
   RemoveFromCartUseCase(this.repository);
 
-  Future<void> call(int productId) {
+  Future<Either<Failure, void>> call(int productId) {
     return repository.removeFromCart(productId);
   }
 }
