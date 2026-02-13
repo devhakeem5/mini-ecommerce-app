@@ -1,6 +1,6 @@
 # Mini Commerce App
 
-A Flutter e-commerce application built with **Clean Architecture**, **Cubit state management**, and an **offline-first** data strategy. Designed to demonstrate architectural maturity, data consistency under concurrency, and polished UX in a constrained scope.
+A production-style Flutter mini commerce app focused on **offline-first data consistency**, **concurrency-safe cart mutations**, and **strict Clean Architecture boundaries**. While limited in scope as a take-home challenge, it is implemented with the rigor of a production system.
 
 **API**: [DummyJSON Products](https://dummyjson.com/products) — pagination, search, and category endpoints.
 
@@ -11,13 +11,13 @@ A Flutter e-commerce application built with **Clean Architecture**, **Cubit stat
 | Area | Implementation |
 |------|---------------|
 | **Clean Architecture** | Strict 3-layer separation: `domain/` (entities, use cases, repo interfaces) → `data/` (repo implementations, data sources, models) → `presentation/` (cubits, pages, widgets). Domain has zero framework dependencies. |
-| **Offline-First** | Stale-While-Revalidate pattern in `ProductsRepositoryImpl`: cache is read first and yielded immediately, remote fetch runs in background, UI updates transparently. User never blocks on network. |
+| **Offline-First Data** | Stale-While-Revalidate pattern in `ProductsRepositoryImpl`: cache is read first and yielded immediately, remote fetch runs in background, UI updates transparently. User never blocks on network. |
 | **Concurrency-Safe Cart** | Sequential queue (`_processingQueue`) in `CartRepositoryImpl` serializes all cart mutations. Prevents race conditions from rapid add/remove operations without requiring database transactions. |
-| **Debounced Search** | 500ms debounce with local-first strategy (local DB searched immediately, remote results sync in background). Search ID versioning (`_searchId`) prevents stale API responses from overwriting newer results. |
-| **Fly-to-Cart Animation** | Quadratic Bézier curve overlay animation (600ms, `easeInOutCubic`) — product thumbnail flies from card to basket icon. Non-blocking: user continues browsing during animation. |
+| **Non-Blocking Cart UX** | Fly-to-cart animation implemented as an isolated **OverlayEntry** to prevent widget tree rebuilds during animation and maintain uninterrupted browsing flow. Avoids blocking dialogs entirely. |
+| **Search Integrity** | 500ms debounce with local-first strategy. Search ID versioning (`_searchId`) prevents stale API responses from overwriting newer results (race condition protection). |
 | **Functional Error Model** | `dartz` `Either<Failure, T>` across all repository boundaries. Three failure types: `ServerFailure`, `CacheFailure`, `NetworkFailure`. No unchecked exceptions cross layer boundaries. |
-| **Pagination with Deduplication** | ID-keyed `Map` dedup in `ProductsCubit` and `SearchCubit` prevents duplicate entries when API data shifts between pages. `hasReachedMax` stops requests when page size is not filled. |
-| **Price Synchronization** | `CartCubit.syncPrices()` triggered by `BlocListener` in `main.dart` on every `ProductsLoaded` emission. Compares and persists only changed prices to Hive. |
+| **Price Synchronization** | Non-destructive synchronization ensures cart state remains visible during product refresh cycles. Only changed prices are persisted to Hive and re-emitted to UI. |
+| **Layout Stability** | Skeleton loaders (Shimmer) used to preserve layout stability during async data fetches and prevent visual jumps. |
 
 ---
 
@@ -26,14 +26,18 @@ A Flutter e-commerce application built with **Clean Architecture**, **Cubit stat
 ```
 lib/
 ├── core/           → DI (GetIt), Error types, Localization (AR/EN), Connectivity, Theme, Hive init
-├── domain/         → 7 Entities, 7 Repository interfaces, 20 Use Cases (zero framework deps)
-├── data/           → 7 Repository implementations, 6 Data Sources (5 local Hive + 1 remote Dio), 5 Models
-└── presentation/   → Feature-first: products/ cart/ profile/ common/ (cubits, pages, widgets)
+├── domain/         → Multiple entities and use cases organized per feature boundary (zero framework deps)
+├── data/           → Repository implementations, Local (Hive) + Remote (Dio) Data Sources, Models
+└── presentation/   → Feature-first: products/ cart/ profile/ common/
 ```
 
 **Data Flow**: `UI → Cubit → UseCase → Repository Interface (Domain) → Repository Impl (Data) → Local/Remote DataSource`
 
-**Offline Strategy**: Repository reads cache → yields cached result → fetches remote → updates cache → yields fresh result. If remote fails silently when cache exists.
+**Design Trade-offs**:
+- `syncPrices` orchestrator placed at application layer (`main.dart`) for simplicity instead of introducing a complex domain event bus.
+- Hive used over SQLite for simplicity; strict sequential queue implemented in code to mitigate lack of ACID transactions.
+
+**Performance Note**: Optimized to minimize rebuilds using localized `BlocBuilder` scopes and `const` widgets throughout the widget tree.
 
 ---
 
@@ -43,19 +47,17 @@ lib/
 
 | Screen | Key Features |
 |--------|-------------|
-| **Home / Browse** | Promotions slider, categories, brands, new arrivals, recommended. Infinite scroll (20/page). Skeleton loaders. Cached data instant on launch. Auto-retry pagination on reconnect. |
-| **Product Details** | Hero transition, image gallery, star rating, category-aware variant selectors, description bottom sheet, related products, fly-to-cart animation. Out-of-stock gating. |
-| **Cart** | Hive-persisted. Quantity controls (min 1). Swipe-to-delete with 5s undo. Subtotal/discount/total in domain entity. Price sync on product load. Clear with confirmation. |
+| **Home / Browse** | Promotions slider, categories, brands, new arrivals, recommended. Infinite scroll (20/page). Cached data instant on launch. Auto-retry pagination on reconnect. |
+| **Product Details** | Hero transition, image gallery, star rating, category-aware variant selectors, description bottom sheet, related products. Out-of-stock gating. |
+| **Cart** | Hive-persisted. Quantity controls (min 1). Swipe-to-delete with 5s undo. Subtotal lookup in domain entity. Price sync on product load. |
 
 ### Optional
 
 | Screen | Description |
 |--------|-------------|
-| **Search** | Debounced (500ms), local-first, stale-response protected, search history with auto-suggestions, offline fallback across all cached products. |
-| **Shipping Info** | Address selection/management with Standard/Express/Store Pickup options. |
-| **Checkout** | Payment method selection with order summary breakdown. |
-| **Order Confirmation** | Animated confirmation with order details. |
-| **Profile / Settings** | Theme toggle (Light/Dark), language toggle (AR/EN). |
+| **Search** | Debounced (500ms), local-first, stale-response protected, search history, offline fallback. |
+| **Shipping & Checkout** | Address management and payment selection UI (demonstration only). |
+| **Settings** | Theme toggle (Light/Dark), language toggle (AR/EN). |
 
 ---
 
@@ -82,10 +84,6 @@ lib/
 | Networking | Dio |
 | DI | GetIt |
 | Error Handling | dartz (`Either<Failure, T>`) |
-| Image Caching | cached_network_image |
-| Loading Effects | shimmer |
-| Connectivity | connectivity_plus |
-| Localization | Custom (230+ AR/EN strings) |
 | Testing | flutter_test, bloc_test, mocktail |
 
 ---
@@ -96,22 +94,16 @@ lib/
 flutter test
 ```
 
-| Suite | Coverage |
-|-------|----------|
-| `ProductsCubit` | Initial state, load success, load failure |
-| `SearchCubit` | Search flow, debounce, empty results |
-| `CartCubit` | Add, remove, increment, decrement, clear, persistence |
-| `CartRepositoryImpl` | Repository implementation tests |
-| `ProductsRepositoryImpl` | Repository with cache + remote tests |
-| `CategoryRepositoryImpl` | Category fetching tests |
-| `SearchHistoryRepositoryImpl` | History CRUD tests |
-| `GetProductsUseCase` | UseCase execution tests |
-| Entity Tests | Equatable, computed properties |
-| Model Tests | JSON serialization, toEntity conversion |
-| Core Tests | Failures, ConnectivityCubit |
-| Widget Tests | App initialization smoke test |
+**Philosophy**: Business-critical logic (cart concurrency, search race conditions, pagination merging, price sync) is covered with unit tests. UI logic is tested via widget smoke tests.
 
-**18 test files** covering domain, data, presentation, and core layers.
+| Suite | Focus Area |
+|-------|------------|
+| `ProductsCubit` | Initial state, load success, load failure, deduplication |
+| `SearchCubit` | Search flow, debounce, stale response rejection |
+| `CartCubit` | Add, remove, increment, decrement, persistence, price sync |
+| `CartRepository` | Queue serialization, Hive interaction |
+| `ProductsRepository` | Stale-While-Revalidate caching strategy |
+| `UseCases` | Pure domain logic execution |
 
 ---
 
