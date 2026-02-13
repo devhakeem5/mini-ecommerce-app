@@ -113,8 +113,8 @@ class _ProductCardState extends State<ProductCard> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'The Ordinary',
+                  Text(
+                    product.brand,
                     style: TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.w400),
                   ),
                   Text(
