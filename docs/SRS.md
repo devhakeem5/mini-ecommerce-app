@@ -49,7 +49,7 @@
 | FR-22 | The system shall debounce search input by 500 milliseconds. | `SearchCubit.onSearchChanged()` — `Timer(const Duration(milliseconds: 500), ...)`. |
 | FR-23 | The system shall show search auto-suggestions from persisted history. | `_fullHistory.where((e) => e.toLowerCase().contains(query.toLowerCase()))` emitted as `SearchHistoryLoaded.suggestions`. |
 | FR-24 | The system shall execute local search first, then remote search. | `SearchCubit.search()` — calls `searchProductsLocallyUseCase` first, emits local results; then calls `searchProductsUseCase` stream. |
-| FR-25 | The system shall protect against stale search responses using ID versioning. | `_searchId` integer incremented on each `search()` call. All async results check `currentSearchId == _searchId` before emitting. |
+| FR-25 | The system shall protect against stale search responses. | Previous search stream subscription is cancelled via `_cancelSearch()` at the start of each `search()` call. All emit paths check `isClosed` before emitting state. |
 | FR-26 | The system shall persist search history and support deletion of individual entries. | `AddToSearchHistoryUseCase`, `GetSearchHistoryUseCase`, `DeleteSearchHistoryUseCase` backed by `SearchHistoryLocalDataSource` (Hive). |
 | FR-27 | The system shall fallback to searching all cached products when offline. | `ProductsRepositoryImpl._fetchProductsStream()` — on remote failure with `query != null`, calls `local.searchLocalProducts(query)`. |
 | FR-28 | The system shall support paginated search results with deduplication. | `SearchCubit.loadMoreResults()` with `_dedup()` and `hasReachedMax` detection. |
@@ -181,15 +181,17 @@ Future<T> _enqueue<T>(Future<T> Function() task) {
 
 ### Search Race Condition Prevention
 
-`SearchCubit._searchId` acts as a monotonically increasing version counter:
+`SearchCubit._cancelSearch()` cancels the previous `_searchSubscription` before starting a new search:
 
 ```dart
-final int currentSearchId = ++_searchId;
-// ... async work ...
-if (currentSearchId != _searchId) return; // discard stale result
+void _cancelSearch() {
+  _searchSubscription?.cancel();
+  _searchSubscription = null;
+  _isFetching = false;
+}
 ```
 
-This prevents a slow API response from Search A overwriting results from the newer Search B.
+When a new search begins, `_cancelSearch()` is called first. This ensures any in-flight stream from a previous search is terminated before the new one starts. Combined with `isClosed` checks before every emit, this prevents a slow API response from Search A overwriting results from the newer Search B.
 
 ---
 

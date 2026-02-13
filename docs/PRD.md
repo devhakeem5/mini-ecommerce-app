@@ -102,7 +102,7 @@ Most e-commerce app demos prioritize visual polish while neglecting the engineer
 - **Debounce**: 500ms timer in `SearchCubit.onSearchChanged()`.
 - **Local-first**: On search trigger, local DB is searched first (`searchProductsLocallyUseCase`). Local results are emitted immediately.
 - **Remote sync**: API search runs in parallel. Remote results replace local results via `SearchResultsLoaded` state emission.
-- **Stale-response protection**: `_searchId` integer incremented on each new search. All async callbacks validate `currentSearchId == _searchId` before emitting state. This prevents out-of-order responses from overwriting newer results.
+- **Stale-response protection**: Previous search stream subscription is cancelled (`_cancelSearch()`) before each new query, ensuring only the latest search emits results. Combined with `isClosed` guards before every emit to prevent state updates after widget disposal.
 - **Search history**: Persisted via `SearchHistoryLocalDataSource` (Hive). Auto-suggestions filtered from history during typing.
 - **Offline fallback**: When API fails, `ProductsRepositoryImpl` searches all locally cached products (`searchLocalProducts`) across all cache keys.
 - **Pagination**: Search results support infinite scroll with deduplication.
@@ -147,7 +147,7 @@ Most e-commerce app demos prioritize visual polish while neglecting the engineer
 | US-2 | As a user, I want to scroll through products infinitely without seeing duplicates. | Each page appends 20 items. `_dedup()` filters by product ID. `hasReachedMax` stops further requests when response < page size. |
 | US-3 | As a user, I want to add products to my cart with a satisfying visual feedback. | Tapping "Add to Cart" launches fly-to-cart animation (product image arcs toward basket icon). Cart icon bounces on arrival. No modal dialog interrupts the flow. |
 | US-4 | As a user, I want my cart to be exactly as I left it after restarting the app. | Cart serialized to Hive as `List<Map>`. Loaded on app init via `CartCubit.loadCart()`. Quantities and calculated totals preserved. |
-| US-5 | As a user, I want search results to appear quickly without typing every character triggering an API call. | 500ms debounce timer. Local results shown immediately. Remote results replace local on arrival. Stale responses discarded via `_searchId` check. |
+| US-5 | As a user, I want search results to appear quickly without typing every character triggering an API call. | 500ms debounce timer. Local results shown immediately. Remote results replace local on arrival. Stale responses discarded via subscription cancellation (`_cancelSearch()`). |
 | US-6 | As a user, I want to undo accidental cart item deletions. | Swipe-to-delete shows SnackBar with "Undo" action. 5-second window. `undoRemoveItem()` restores item with original quantity. |
 | US-7 | As a user, I want to know when I'm offline and still be able to use the app. | `OfflineIndicator` banner displayed. Custom toast on connectivity change. All cached data accessible. Pagination retries automatically on reconnect. |
 | US-8 | As a user, I want cart prices to reflect the latest server data. | `syncPrices()` triggered when `ProductsLoaded` state emits. `updateProductPrices()` compares and updates only changed prices in Hive. |
@@ -162,7 +162,7 @@ Most e-commerce app demos prioritize visual polish while neglecting the engineer
 | Search debounce timing | 500ms | Timer duration in `SearchCubit.onSearchChanged()` |
 | Fly-to-cart animation duration | 600ms | `AnimationController` duration in `_FlyingWidgetState` |
 | Cart operation concurrency safety | Zero race conditions | Sequential queue (`_processingQueue`) serializes all cart mutations |
-| Stale search response rate | 0% | `_searchId` versioning guarantees only latest search emits state |
+| Stale search response rate | 0% | Subscription cancellation (`_cancelSearch()`) guarantees only the latest search emits state |
 | Offline data availability | 100% of cached pages | All previously fetched product pages and search results available offline |
 
 ---

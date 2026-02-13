@@ -231,15 +231,15 @@ User        SearchPage       SearchCubit                  Timer         SearchPr
  │               │                │  search("phone")        │                     │                            │                        │
  │               │                │<────────────────────────│                     │                            │                        │
  │               │                │                         │                     │                            │                        │
- │               │                │  ++_searchId (→ e.g. 5) │                     │                            │                        │
- │               │                │                         │                     │                            │                        │
+ │               │                │  _cancelSearch()         │                     │                            │                        │
+ │               │                │  (cancel prev sub)      │                     │                            │                        │
  │               │                │  emit(SearchLoading)    │                     │                            │                        │
  │               │<───────────────│                         │                     │                            │                        │
  │               │                │                         │                     │                            │                        │
  │               │                │  Save to history        │                     │                            │                        │
  │               │                │  (addToSearchHistoryUseCase)                  │                            │                        │
  │               │                │                         │                     │                            │                        │
- │               │                │  if (5 != _searchId) return ← STALE CHECK    │                            │                        │
+ │               │                │  (previous sub already cancelled)            │                            │                        │
  │               │                │                         │                     │                            │                        │
  │               │                │  searchProductsLocallyUseCase("phone")        │                            │                        │
  │               │                │─────────────────────────────────────────────>│                            │                        │
@@ -247,14 +247,14 @@ User        SearchPage       SearchCubit                  Timer         SearchPr
  │               │                │  Right(ProductsResult(local results))         │                            │                        │
  │               │                │<─────────────────────────────────────────────│                            │                        │
  │               │                │                         │                     │                            │                        │
- │               │                │  if (!isClosed && 5 == _searchId              │                            │                        │
+ │               │                │  if (!isClosed                                │                            │                        │
  │               │                │      && localResults.isNotEmpty)              │                            │                        │
  │               │                │  emit(SearchResultsLoaded(                    │                            │                        │
  │               │                │    products: localResults,                    │                            │                        │
  │               │                │    isOffline: true))     │                     │                            │                        │
  │               │<───────────────│                         │                     │                            │                        │
  │               │                │                         │                     │                            │                        │
- │  LOCAL results │                │  if (5 != _searchId) return ← STALE CHECK   │                            │                        │
+ │  LOCAL results │                │  if (isClosed) return                        │                            │                        │
  │  shown         │                │                         │                     │                            │                        │
  │  instantly     │                │  searchProductsUseCase(query, limit, skip)   │                            │                        │
  │<──────────────│                │─────────────────────────────────────────────────────────────────────────>│                        │
@@ -263,7 +263,7 @@ User        SearchPage       SearchCubit                  Timer         SearchPr
  │               │                │                  Stream: cache yield then remote yield                     │                        │
  │               │                │                         │                     │                            │                        │
  │               │                │  forEach result:        │                     │                            │                        │
- │               │                │  if (isClosed || 5 != _searchId) return ← STALE CHECK                     │                        │
+ │               │                │  if (isClosed) return (sub cancelled for stale)                            │                        │
  │               │                │                         │                     │                            │                        │
  │               │                │  result.fold:           │                     │                            │                        │
  │               │                │  emit(SearchResultsLoaded(                    │                            │                        │
@@ -279,21 +279,22 @@ User        SearchPage       SearchCubit                  Timer         SearchPr
 
 ### Stale-Response Protection Explained
 
-The `_searchId` mechanism prevents a critical race condition:
+The subscription-cancellation mechanism prevents a critical race condition:
 
 **Scenario without protection**:
-1. User types "phone" → Search A fires (slow network, takes 3 seconds).
-2. User types "laptop" → Search B fires (fast network, returns in 500ms).
+1. User types "phone" -> Search A fires (slow network, takes 3 seconds).
+2. User types "laptop" -> Search B fires (fast network, returns in 500ms).
 3. Search B results displayed correctly.
-4. Search A results arrive 2.5 seconds later → **overwrites Search B results** with wrong data.
+4. Search A results arrive 2.5 seconds later -> **overwrites Search B results** with wrong data.
 
-**With `_searchId` protection**:
-1. Search A fires with `currentSearchId = 4`.
-2. Search B fires with `currentSearchId = 5`. `_searchId` is now `5`.
-3. Search B results arrive → `5 == _searchId` → emitted ✅.
-4. Search A results arrive → `4 != _searchId` → **discarded** ✅.
+**With subscription cancellation (`_cancelSearch()`) protection**:
+1. Search A fires, creating `_searchSubscription` for its stream.
+2. Search B fires. `_cancelSearch()` cancels Search A's subscription first.
+3. Search B creates a new `_searchSubscription` for its own stream.
+4. Search A results arrive -> subscription already cancelled -> **discarded**.
+5. Search B results arrive -> active subscription -> emitted.
 
-This is an application of the **version-based staleness check** pattern. It is simple, requires no cancellation tokens or stream subscriptions, and is effective for any number of overlapping searches.
+This approach uses Dart's native `StreamSubscription.cancel()` mechanism. It is simple, requires no manual version counters, and guarantees that only the latest search can emit results.
 
 ---
 
