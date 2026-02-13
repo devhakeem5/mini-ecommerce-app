@@ -6,6 +6,10 @@ import 'package:mini_commerce_app/presentation/cart/cubit/cart_cubit.dart';
 import '../../../core/network/connectivity_cubit.dart';
 import '../../../core/network/connectivity_state.dart';
 import '../../../core/util/responsive.dart';
+import '../../common/fly_to_cart/fly_to_cart_controller.dart';
+import '../../common/fly_to_cart/fly_to_cart_overlay.dart';
+import '../../common/visual_cart/visual_cart_controller.dart';
+import '../../common/visual_cart/visual_cart_overlay.dart';
 import '../../common/widgets/offline_indicator.dart';
 import '../../common/widgets/offline_widget.dart';
 import '../../common/widgets/skeleton_loaders.dart';
@@ -24,6 +28,8 @@ class _SearchPageState extends State<SearchPage> {
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _focusNode = FocusNode();
   final ScrollController _scrollController = ScrollController();
+  final FlyToCartControllerState _flyController = FlyToCartControllerState();
+  final VisualCartControllerState _visualCartController = VisualCartControllerState();
 
   @override
   void initState() {
@@ -37,6 +43,8 @@ class _SearchPageState extends State<SearchPage> {
     _searchController.dispose();
     _focusNode.dispose();
     _scrollController.dispose();
+    _flyController.dispose();
+    _visualCartController.dispose();
     super.dispose();
   }
 
@@ -50,75 +58,94 @@ class _SearchPageState extends State<SearchPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: MultiBlocListener(
-          listeners: [
-            BlocListener<SearchCubit, SearchState>(
-              listener: (context, state) {
-                if (state is SearchResultsLoaded) {
-                  context.read<CartCubit>().syncPrices(state.products);
-                }
-              },
-            ),
-            BlocListener<ConnectivityCubit, ConnectivityState>(
-              listenWhen: (previous, current) =>
-                  previous is ConnectivityOffline && current is ConnectivityOnline,
-              listener: (context, connState) {
-                final searchState = context.read<SearchCubit>().state;
-                if (searchState is SearchResultsLoaded && searchState.loadMoreError != null) {
-                  context.read<SearchCubit>().loadMoreResults();
-                }
-              },
-            ),
-          ],
-          child: Column(
-            children: [
-              _buildSearchBar(context),
-              BlocBuilder<ConnectivityCubit, ConnectivityState>(
-                builder: (context, connState) {
-                  if (connState is ConnectivityOffline) {
-                    final searchState = context.watch<SearchCubit>().state;
-                    final hasResults =
-                        searchState is SearchResultsLoaded && searchState.products.isNotEmpty;
-                    if (hasResults) {
-                      return const OfflineIndicator();
-                    }
-                  }
-                  return const SizedBox.shrink();
-                },
-              ),
-              Expanded(
-                child: BlocBuilder<SearchCubit, SearchState>(
-                  builder: (context, state) {
-                    if (state is SearchLoading) {
-                      return ProductGridSkeleton(
-                        crossAxisCount: context.responsiveValue(mobile: 2, tablet: 3, desktop: 4),
-                      );
-                    } else if (state is SearchHistoryLoaded) {
-                      return _buildHistoryAndSuggestions(context, state);
-                    } else if (state is SearchResultsLoaded) {
-                      return _buildSearchResults(state);
-                    } else if (state is SearchError) {
-                      if (state.message.toLowerCase().contains('internet') ||
-                          context.read<ConnectivityCubit>().state is ConnectivityOffline) {
-                        return OfflineWidget(
-                          onRetry: () {
-                            final query = _searchController.text.trim();
-                            if (query.isNotEmpty) {
-                              context.read<SearchCubit>().search(query);
+    return FlyToCartController(
+      state: _flyController,
+      child: VisualCartController(
+        state: _visualCartController,
+        child: Stack(
+          children: [
+            Scaffold(
+              body: SafeArea(
+                child: MultiBlocListener(
+                  listeners: [
+                    BlocListener<SearchCubit, SearchState>(
+                      listener: (context, state) {
+                        if (state is SearchResultsLoaded) {
+                          context.read<CartCubit>().syncPrices(state.products);
+                        }
+                      },
+                    ),
+                    BlocListener<ConnectivityCubit, ConnectivityState>(
+                      listenWhen: (previous, current) =>
+                          previous is ConnectivityOffline && current is ConnectivityOnline,
+                      listener: (context, connState) {
+                        final searchState = context.read<SearchCubit>().state;
+                        if (searchState is SearchResultsLoaded &&
+                            searchState.loadMoreError != null) {
+                          context.read<SearchCubit>().loadMoreResults();
+                        }
+                      },
+                    ),
+                  ],
+                  child: Column(
+                    children: [
+                      _buildSearchBar(context),
+                      BlocBuilder<ConnectivityCubit, ConnectivityState>(
+                        builder: (context, connState) {
+                          if (connState is ConnectivityOffline) {
+                            // Using context.read instead of watch inside builder to avoid unnecessary multi-point rebuilds
+                            final searchState = context.read<SearchCubit>().state;
+                            final hasResults =
+                                searchState is SearchResultsLoaded &&
+                                searchState.products.isNotEmpty;
+                            if (hasResults) {
+                              return const OfflineIndicator();
                             }
+                          }
+                          return const SizedBox.shrink();
+                        },
+                      ),
+                      Expanded(
+                        child: BlocBuilder<SearchCubit, SearchState>(
+                          builder: (context, state) {
+                            if (state is SearchLoading) {
+                              return ProductGridSkeleton(
+                                crossAxisCount: context.responsiveValue(
+                                  mobile: 2,
+                                  tablet: 3,
+                                  desktop: 4,
+                                ),
+                              );
+                            } else if (state is SearchHistoryLoaded) {
+                              return _buildHistoryAndSuggestions(context, state);
+                            } else if (state is SearchResultsLoaded) {
+                              return _buildSearchResults(state);
+                            } else if (state is SearchError) {
+                              if (state.message.toLowerCase().contains('internet') ||
+                                  context.read<ConnectivityCubit>().state is ConnectivityOffline) {
+                                return OfflineWidget(
+                                  onRetry: () {
+                                    final query = _searchController.text.trim();
+                                    if (query.isNotEmpty) {
+                                      context.read<SearchCubit>().search(query);
+                                    }
+                                  },
+                                );
+                              }
+                              return Center(child: Text(state.message));
+                            }
+                            return const SizedBox.shrink();
                           },
-                        );
-                      }
-                      return Center(child: Text(state.message));
-                    }
-                    return const SizedBox.shrink();
-                  },
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ],
-          ),
+            ),
+            FlyToCartOverlay(controller: _flyController),
+            VisualCartOverlay(controller: _visualCartController),
+          ],
         ),
       ),
     );

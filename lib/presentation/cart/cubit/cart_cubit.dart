@@ -38,14 +38,25 @@ class CartCubit extends Cubit<CartState> {
   }
 
   Future<void> addToCart(Product product) async {
-    final addResult = await addToCartUseCase(product);
-    addResult.fold((failure) => emit(CartError(failure.message)), (_) async {
-      final loadResult = await loadCartUseCase();
-      loadResult.fold(
-        (failure) => emit(CartError(failure.message)),
-        (items) => emit(CartLoaded(cart: Cart(items: items))),
+    try {
+      final addResult = await addToCartUseCase(product);
+      addResult.fold(
+        (failure) {
+          emit(CartError(failure.message));
+        },
+        (_) async {
+          final loadResult = await loadCartUseCase();
+          loadResult.fold(
+            (failure) {
+              emit(CartError(failure.message));
+            },
+            (items) {
+              emit(CartLoaded(cart: Cart(items: items)));
+            },
+          );
+        },
       );
-    });
+    } catch (_) {}
   }
 
   Future<void> increment(int productId) async {
@@ -129,14 +140,23 @@ class CartCubit extends Cubit<CartState> {
   }
 
   Future<void> syncPrices(List<Product> latestProducts) async {
-    if (state is! CartLoaded) return;
+    if (state is! CartLoaded) {
+      return;
+    }
 
-    final updateResult = await updateCartPricesUseCase(latestProducts);
-    updateResult.fold((_) {}, (_) async {
-      if (!isClosed) {
-        final loadResult = await loadCartUseCase();
-        loadResult.fold((_) {}, (items) => emit(CartLoaded(cart: Cart(items: items))));
-      }
-    });
+    try {
+      final updateResult = await updateCartPricesUseCase(latestProducts);
+      updateResult.fold(
+        (_) {},
+        (_) async {
+          if (!isClosed) {
+            final loadResult = await loadCartUseCase();
+            loadResult.fold((_) {}, (items) {
+              emit(CartLoaded(cart: Cart(items: items)));
+            });
+          }
+        },
+      );
+    } catch (_) {}
   }
 }

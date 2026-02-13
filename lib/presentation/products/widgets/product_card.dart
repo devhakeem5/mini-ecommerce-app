@@ -181,34 +181,45 @@ class _ProductCardState extends State<ProductCard> {
       return;
     }
 
-    context.read<CartCubit>().addToCart(product);
-
-    final controllerState = FlyToCartController.maybeOf(context);
-    if (controllerState != null) {
-      final renderBox = _imageKey.currentContext?.findRenderObject() as RenderBox?;
-      if (renderBox != null && renderBox.hasSize) {
-        final position = renderBox.localToGlobal(Offset.zero);
-        final center = position + Offset(renderBox.size.width / 2, renderBox.size.height / 2);
-
-        controllerState.addFlyingItem(
-          FlyingItem(
-            imageUrl: product.thumbnail,
-            startPosition: center,
-            id: '${product.id}_${DateTime.now().millisecondsSinceEpoch}',
-          ),
-        );
-      }
+    try {
+      context.read<CartCubit>().addToCart(product);
+    } catch (e) {
+      CustomToast.show(context, message: 'Failed to add to cart', type: ToastType.error);
     }
 
-    final visualCart = VisualCartController.maybeOf(context);
-    if (visualCart != null) {
-      final renderBox = _imageKey.currentContext?.findRenderObject() as RenderBox?;
-      if (renderBox != null && renderBox.hasSize) {
-        final position = renderBox.localToGlobal(Offset.zero);
-        final center = position + Offset(renderBox.size.width / 2, renderBox.size.height / 2);
-        visualCart.addProduct(product.thumbnail, center);
+    try {
+      final controllerState = FlyToCartController.maybeOf(context);
+
+      if (controllerState != null) {
+        final renderBox = _imageKey.currentContext?.findRenderObject() as RenderBox?;
+
+        if (renderBox != null && renderBox.hasSize) {
+          final position = renderBox.localToGlobal(Offset.zero);
+          final center = position + Offset(renderBox.size.width / 2, renderBox.size.height / 2);
+          controllerState.addFlyingItem(
+            FlyingItem(
+              imageUrl: product.thumbnail,
+              startPosition: center,
+              id: '${product.id}_${DateTime.now().millisecondsSinceEpoch}',
+            ),
+          );
+        }
       }
-    }
+    } catch (_) {}
+
+    try {
+      final visualCart = VisualCartController.maybeOf(context);
+
+      if (visualCart != null) {
+        final renderBox = _imageKey.currentContext?.findRenderObject() as RenderBox?;
+
+        if (renderBox != null && renderBox.hasSize) {
+          final position = renderBox.localToGlobal(Offset.zero);
+          final center = position + Offset(renderBox.size.width / 2, renderBox.size.height / 2);
+          visualCart.addProduct(product.thumbnail, center);
+        }
+      }
+    } catch (_) {}
   }
 
   VoidCallback? get onTap => widget.onTap;

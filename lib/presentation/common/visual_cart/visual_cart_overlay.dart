@@ -16,7 +16,9 @@ class VisualCartOverlay extends StatefulWidget {
 
 class _VisualCartOverlayState extends State<VisualCartOverlay> with TickerProviderStateMixin {
   late final AnimationController _showHideController;
+  final Tween<Offset> _slideTween = Tween<Offset>(begin: const Offset(-1.2, 0.3), end: Offset.zero);
   late final Animation<Offset> _slideAnimation;
+  final Tween<double> _fadeTween = Tween<double>(begin: 0.0, end: 1.0);
   late final Animation<double> _fadeAnimation;
 
   late final AnimationController _impactController;
@@ -34,19 +36,11 @@ class _VisualCartOverlayState extends State<VisualCartOverlay> with TickerProvid
       vsync: this,
       duration: const Duration(milliseconds: 450),
     );
-    _slideAnimation = Tween<Offset>(begin: const Offset(-1.2, 0.3), end: Offset.zero).animate(
-      CurvedAnimation(
-        parent: _showHideController,
-        curve: Curves.easeOutCubic,
-        reverseCurve: Curves.easeInCubic,
-      ),
+    _slideAnimation = _slideTween.animate(
+      CurvedAnimation(parent: _showHideController, curve: Curves.easeOutCubic),
     );
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _showHideController,
-        curve: Curves.easeOut,
-        reverseCurve: Curves.easeIn,
-      ),
+    _fadeAnimation = _fadeTween.animate(
+      CurvedAnimation(parent: _showHideController, curve: Curves.easeOut),
     );
 
     _impactController = AnimationController(
@@ -82,9 +76,25 @@ class _VisualCartOverlayState extends State<VisualCartOverlay> with TickerProvid
 
   void _onVisibilityChanged() {
     if (_ctrl.isVisible.value) {
-      _showHideController.forward();
+      // Enter from left
+      _slideTween
+        ..begin = const Offset(-1.2, 0.3)
+        ..end = Offset.zero;
+      _fadeTween
+        ..begin = 0.0
+        ..end = 1.0;
+      _showHideController.forward(from: 0);
     } else {
-      _showHideController.reverse();
+      // Exit to right — compute offset to clear the right edge
+      final screenWidth = MediaQuery.of(context).size.width;
+      final exitOffsetX = (screenWidth - _basketLeft) / (_basketWidth + 10);
+      _slideTween
+        ..begin = Offset.zero
+        ..end = Offset(exitOffsetX, 0.3);
+      _fadeTween
+        ..begin = 1.0
+        ..end = 0.0;
+      _showHideController.forward(from: 0);
     }
   }
 
