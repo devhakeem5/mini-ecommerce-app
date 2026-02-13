@@ -1,8 +1,11 @@
 import 'dart:async';
 
+import 'package:dartz/dartz.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../core/error/failures.dart';
 import '../../../domain/entities/product.dart';
+import '../../../domain/entities/products_result.dart';
 import '../../../domain/usecases/products/search_products_locally_usecase.dart';
 import '../../../domain/usecases/products/search_products_usecase.dart';
 import '../../../domain/usecases/search/add_to_search_history_usecase.dart';
@@ -19,8 +22,8 @@ class SearchCubit extends Cubit<SearchState> {
 
   static const int _pageSize = 20;
   Timer? _debounce;
+  StreamSubscription<Either<Failure, ProductsResult>>? _searchSubscription;
   List<String> _fullHistory = [];
-  int _searchId = 0;
   String _lastQuery = '';
   bool _isFetching = false;
 
@@ -42,7 +45,7 @@ class SearchCubit extends Cubit<SearchState> {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
 
     if (query.isEmpty) {
-      _searchId++;
+      _cancelSearch();
       _lastQuery = '';
       emit(SearchHistoryLoaded(history: _fullHistory));
       return;
@@ -63,8 +66,8 @@ class SearchCubit extends Cubit<SearchState> {
   Future<void> search(String query) async {
     if (query.isEmpty) return;
 
+    _cancelSearch();
     _lastQuery = query;
-    final int currentSearchId = ++_searchId;
 
     emit(SearchLoading());
 
@@ -72,22 +75,18 @@ class SearchCubit extends Cubit<SearchState> {
     final historyResult = await getSearchHistoryUseCase();
     historyResult.fold((l) {}, (r) => _fullHistory = r);
 
-    if (currentSearchId != _searchId) return;
-
+    // Local Search First (Fast)
     final localResult = await searchProductsLocallyUseCase(query: query);
     localResult.fold((failure) {}, (productsResult) {
-      if (!isClosed && currentSearchId == _searchId && productsResult.products.isNotEmpty) {
+      if (!isClosed && productsResult.products.isNotEmpty) {
         emit(SearchResultsLoaded(products: productsResult.products, isOffline: true));
       }
     });
 
-    if (currentSearchId != _searchId) return;
-
-    try {
-      final stream = searchProductsUseCase(query: query, limit: _pageSize, skip: 0);
-
-      await stream.forEach((result) {
-        if (isClosed || currentSearchId != _searchId) return;
+    // Remote Search
+    _searchSubscription = searchProductsUseCase(query: query, limit: _pageSize, skip: 0).listen(
+      (result) {
+        if (isClosed) return;
 
         result.fold(
           (failure) {
@@ -107,12 +106,13 @@ class SearchCubit extends Cubit<SearchState> {
             );
           },
         );
-      });
-    } catch (e) {
-      if (!isClosed && currentSearchId == _searchId && state is! SearchResultsLoaded) {
-        emit(SearchError(e.toString()));
-      }
-    }
+      },
+      onError: (e) {
+        if (!isClosed && state is! SearchResultsLoaded) {
+          emit(SearchError(e.toString()));
+        }
+      },
+    );
   }
 
   Future<void> loadMoreResults() async {
@@ -123,43 +123,59 @@ class SearchCubit extends Cubit<SearchState> {
     if (_lastQuery.isEmpty) return;
 
     _isFetching = true;
-    final localId = _searchId;
 
-    try {
-      final skip = currentState.products.length;
-      final stream = searchProductsUseCase(query: _lastQuery, limit: _pageSize, skip: skip);
+    // We do NOT want to cancel the main search subscription if it's still running (unlikely if we are here),
+    // but typically loadMore is a distinct operation.
+    // However, if we use the SAME subscription variable, we ensure single-flight safely.
+    // If previous search was done, subscription is "done" but variable holds it.
+    // We should cancel any previous subscription to be safe.
+    await _searchSubscription?.cancel();
 
-      await stream.forEach((result) {
-        if (isClosed || localId != _searchId) return;
+    final skip = currentState.products.length;
 
-        result.fold(
-          (failure) {
-            if (state is SearchResultsLoaded) {
-              emit((state as SearchResultsLoaded).copyWith(loadMoreError: failure.message));
-            }
-          },
-          (productsResult) {
-            final newProducts = productsResult.products;
-            final hasReachedMax = newProducts.length < _pageSize;
-            final allProducts = _dedup(currentState.products + newProducts);
+    _searchSubscription = searchProductsUseCase(query: _lastQuery, limit: _pageSize, skip: skip)
+        .listen(
+          (result) {
+            if (isClosed) return;
+            _isFetching = false;
 
-            emit(
-              SearchResultsLoaded(
-                products: allProducts,
-                isOffline: productsResult.isOffline,
-                hasReachedMax: hasReachedMax,
-                wasPagingAttempted: true,
-              ),
+            result.fold(
+              (failure) {
+                if (state is SearchResultsLoaded) {
+                  emit((state as SearchResultsLoaded).copyWith(loadMoreError: failure.message));
+                }
+              },
+              (productsResult) {
+                final newProducts = productsResult.products;
+                final hasReachedMax = newProducts.length < _pageSize;
+                final allProducts = _dedup(currentState.products + newProducts);
+
+                emit(
+                  SearchResultsLoaded(
+                    products: allProducts,
+                    isOffline: productsResult.isOffline,
+                    hasReachedMax: hasReachedMax,
+                    wasPagingAttempted: true,
+                  ),
+                );
+              },
             );
           },
+          onError: (e) {
+            _isFetching = false;
+            if (!isClosed && state is SearchResultsLoaded) {
+              emit((state as SearchResultsLoaded).copyWith(loadMoreError: e.toString()));
+            }
+          },
+          onDone: () {
+            _isFetching = false;
+          },
         );
-      });
-    } catch (e) {
-      if (!isClosed && localId == _searchId && state is SearchResultsLoaded) {
-        emit((state as SearchResultsLoaded).copyWith(loadMoreError: e.toString()));
-      }
-    }
+  }
 
+  void _cancelSearch() {
+    _searchSubscription?.cancel();
+    _searchSubscription = null;
     _isFetching = false;
   }
 
@@ -186,6 +202,7 @@ class SearchCubit extends Cubit<SearchState> {
   @override
   Future<void> close() {
     _debounce?.cancel();
+    _cancelSearch();
     return super.close();
   }
 }
