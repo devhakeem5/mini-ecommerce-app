@@ -225,7 +225,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
 
                 ProductInfoRow(
                   icon: _canAddToCart ? Icons.check_circle_outline : Icons.cancel_outlined,
-                  text: context.tr(_canAddToCart ? 'in_stock' : 'out_of_stock'),
+                  text: product.availabilityStatus,
                   color: _statusColor,
                 ),
                 const SizedBox(height: 8),

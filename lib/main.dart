@@ -36,6 +36,7 @@ class MyApp extends StatelessWidget {
         BlocProvider(create: (_) => sl<ConnectivityCubit>()),
         BlocProvider(create: (_) => sl<AddressCubit>()..loadAddresses()),
         BlocProvider(create: (_) => sl<LocaleCubit>()),
+        BlocProvider(create: (_) => sl<PromotionsCubit>()..loadPromotions()),
       ],
       child: BlocBuilder<LocaleCubit, LocaleState>(
         builder: (context, localeState) {
@@ -56,16 +57,10 @@ class MyApp extends StatelessWidget {
               listeners: [
                 BlocListener<ConnectivityCubit, ConnectivityState>(
                   listener: (context, state) {
-                    if (state is ConnectivityOffline) {
+                    if (state is ConnectivityOnline && state.wasOffline) {
                       CustomToast.show(
                         context,
-                        message: context.tr('offline_disconnected'),
-                        type: ToastType.warning,
-                      );
-                    } else if (state is ConnectivityOnline && state.wasOffline) {
-                      CustomToast.show(
-                        context,
-                        message: context.tr('connection_restored'),
+                        message: context.trRead('connection_restored'),
                         type: ToastType.success,
                       );
                     }

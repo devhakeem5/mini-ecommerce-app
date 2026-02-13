@@ -1,5 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../core/error/failures.dart';
 import '../../../domain/entities/product.dart';
 import '../../../domain/usecases/products/get_products_usecase.dart';
 import 'products_state.dart';
@@ -56,7 +57,11 @@ class ProductsCubit extends Cubit<ProductsState> {
               if (state is ProductsLoaded) {
                 emit((state as ProductsLoaded).copyWith(loadMoreError: failure.message));
               } else {
-                emit(ProductsError(message: failure.message));
+                if (failure is NetworkFailure) {
+                  emit(const ProductsError(message: 'no_internet_no_data'));
+                } else {
+                  emit(ProductsError(message: failure.message));
+                }
               }
             } else if (state is ProductsLoaded) {
               emit((state as ProductsLoaded).copyWith(loadMoreError: failure.message));
@@ -89,5 +94,67 @@ class ProductsCubit extends Cubit<ProductsState> {
         emit((state as ProductsLoaded).copyWith(loadMoreError: e.toString()));
       }
     }
+  }
+
+  Future<void> refresh() async {
+    if (_isFetching) return;
+    _isFetching = true;
+
+    try {
+      final stream = getProductsUseCase(limit: _pageSize, skip: 0);
+      await stream.forEach((result) {
+        if (isClosed) return;
+
+        result.fold(
+          (failure) {
+            // Silent failure - do not disturb UI
+          },
+          (productsResult) {
+            final newProducts = _dedup(productsResult.products);
+            final hasReachedMax = productsResult.products.length < _pageSize;
+
+            if (state is ProductsLoaded) {
+              final currentState = state as ProductsLoaded;
+              if (!_areProductListsEqual(currentState.products, newProducts) ||
+                  currentState.isOffline != productsResult.isOffline) {
+                emit(
+                  ProductsLoaded(
+                    products: newProducts,
+                    isOffline: productsResult.isOffline,
+                    hasReachedMax: hasReachedMax,
+                  ),
+                );
+              }
+            } else {
+              // If we were in Error/Loading state and got data, update
+              if (newProducts.isNotEmpty || !productsResult.isOffline) {
+                emit(
+                  ProductsLoaded(
+                    products: newProducts,
+                    isOffline: productsResult.isOffline,
+                    hasReachedMax: hasReachedMax,
+                  ),
+                );
+              } else if (newProducts.isEmpty && productsResult.isOffline) {
+                // Remain in error/empty state if still offline empty
+              }
+            }
+          },
+        );
+      });
+    } catch (_) {
+      // Silent error
+    } finally {
+      _isFetching = false;
+    }
+  }
+
+  bool _areProductListsEqual(List<Product> list1, List<Product> list2) {
+    if (list1.length != list2.length) return false;
+    for (int i = 0; i < list1.length; i++) {
+      if (list1[i].id != list2[i].id) return false;
+      // We could check other fields if needed, but ID is usually sufficient for identity
+    }
+    return true;
   }
 }

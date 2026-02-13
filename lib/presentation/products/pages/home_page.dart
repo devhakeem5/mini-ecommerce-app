@@ -15,6 +15,7 @@ import '../../common/widgets/main_bottom_nav.dart';
 import '../../common/widgets/offline_indicator.dart';
 import '../cubit/products_cubit.dart';
 import '../cubit/products_state.dart';
+import '../cubit/promotions_cubit.dart';
 import '../widgets/home_app_bar.dart';
 import '../widgets/new_arrivals_section.dart';
 import '../widgets/promotions_slider.dart';
@@ -56,9 +57,9 @@ class _HomeView extends StatelessWidget {
               ScaffoldMessenger.of(context).hideCurrentSnackBar();
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text(context.tr(state.loadMoreError!)),
+                  content: Text(context.trRead(state.loadMoreError!)),
                   action: SnackBarAction(
-                    label: context.tr('retry'),
+                    label: context.trRead('retry'),
                     onPressed: () => context.read<ProductsCubit>().loadMoreProducts(),
                   ),
                 ),
@@ -70,6 +71,10 @@ class _HomeView extends StatelessWidget {
           listenWhen: (previous, current) =>
               previous is ConnectivityOffline && current is ConnectivityOnline,
           listener: (context, connState) {
+            // Trigger silent refresh for products and promotions
+            context.read<ProductsCubit>().refresh();
+            context.read<PromotionsCubit>().refresh();
+
             final productsState = context.read<ProductsCubit>().state;
             if (productsState is ProductsLoaded && productsState.loadMoreError != null) {
               context.read<ProductsCubit>().loadMoreProducts();

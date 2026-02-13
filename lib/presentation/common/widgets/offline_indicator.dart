@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mini_commerce_app/core/localization/app_localizations.dart';
 
 class OfflineIndicator extends StatefulWidget {
   const OfflineIndicator({super.key});
@@ -54,7 +55,7 @@ class _OfflineIndicatorState extends State<OfflineIndicator> with SingleTickerPr
           ),
           const SizedBox(width: 10),
           Text(
-            'No Internet connection',
+            context.tr('no_internet'),
             style: TextStyle(
               fontSize: 13,
               color: Colors.amber.shade900,

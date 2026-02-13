@@ -3,12 +3,12 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mini_commerce_app/core/localization/app_localizations.dart';
 import 'package:mini_commerce_app/presentation/common/widgets/custom_error_widget.dart';
 import 'package:mini_commerce_app/presentation/common/widgets/empty_widget.dart';
-import 'package:mini_commerce_app/presentation/common/widgets/offline_banner.dart';
-import 'package:mini_commerce_app/presentation/products/widgets/product_horizontal_list.dart';
+import 'package:mini_commerce_app/presentation/common/widgets/offline_section_widget.dart';
 
 import '../../common/widgets/section_title.dart';
 import '../../products/cubit/products_cubit.dart';
 import '../../products/cubit/products_state.dart';
+import '../../products/widgets/product_horizontal_list.dart';
 import 'product_horizontal_loader.dart';
 
 class NewArrivalsSection extends StatelessWidget {
@@ -26,6 +26,9 @@ class NewArrivalsSection extends StatelessWidget {
 
         if (state is ProductsLoaded) {
           if (state.products.isEmpty) {
+            if (state.isOffline) {
+              return OfflineSectionWidget(title: title);
+            }
             return EmptyWidget(title: title);
           }
 
@@ -35,7 +38,6 @@ class NewArrivalsSection extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               SectionTitle(title: title),
-              if (state.isOffline) const OfflineBanner(),
               const SizedBox(height: 16),
               ProductsHorizontalList(products: products, heroTagPrefix: 'new_arrivals'),
             ],
@@ -43,6 +45,9 @@ class NewArrivalsSection extends StatelessWidget {
         }
 
         if (state is ProductsError) {
+          if (state.message == 'no_internet_no_data') {
+            return OfflineSectionWidget(title: title);
+          }
           return CustomErrorWidget(
             title: title,
             message: state.message,

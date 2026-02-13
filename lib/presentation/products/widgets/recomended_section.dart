@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:mini_commerce_app/presentation/common/widgets/offline_section_widget.dart';
 
 import '/core/localization/app_localizations.dart';
 import '/presentation/common/widgets/custom_error_widget.dart';
 import '/presentation/common/widgets/empty_widget.dart';
-import '/presentation/common/widgets/offline_banner.dart';
 import '/presentation/products/widgets/product_horizontal_list.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../domain/usecases/products/filter_recommended_products_usecase.dart';
@@ -29,6 +29,9 @@ class RecomendedSection extends StatelessWidget {
 
         if (state is ProductsLoaded) {
           if (state.products.isEmpty) {
+            if (state.isOffline) {
+              return OfflineSectionWidget(title: title);
+            }
             return EmptyWidget(title: title);
           }
 
@@ -56,9 +59,6 @@ class RecomendedSection extends StatelessWidget {
                   child: Text(context.tr('see_more')),
                 ),
               ),
-
-              if (state.isOffline) const OfflineBanner(),
-
               const SizedBox(height: 16),
               ProductsHorizontalList(products: products, heroTagPrefix: 'recommended'),
             ],
@@ -66,6 +66,9 @@ class RecomendedSection extends StatelessWidget {
         }
 
         if (state is ProductsError) {
+          if (state.message == 'no_internet_no_data') {
+            return OfflineSectionWidget(title: title);
+          }
           return CustomErrorWidget(
             title: title,
             message: state.message,

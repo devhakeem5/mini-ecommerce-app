@@ -149,5 +149,48 @@ void main() {
       act: (cubit) => cubit.loadInitialProducts(),
       expect: () => [const ProductsLoading(), const ProductsError(message: 'no_internet_no_data')],
     );
+
+    blocTest<ProductsCubit, ProductsState>(
+      'emits ProductsError with no_internet_no_data when NetworkFailure occurs on initial load',
+      build: () {
+        when(
+          () => mockGetProductsUseCase(limit: 20, skip: 0),
+        ).thenAnswer((_) => Stream.value(const Left(NetworkFailure())));
+        return productsCubit;
+      },
+      act: (cubit) => cubit.loadInitialProducts(),
+      expect: () => [const ProductsLoading(), const ProductsError(message: 'no_internet_no_data')],
+    );
+    blocTest<ProductsCubit, ProductsState>(
+      'refresh emits products when data changes',
+      build: () {
+        when(
+          () => mockGetProductsUseCase(limit: 20, skip: 0),
+        ).thenAnswer((_) => Stream.value(Right(tProductsResult)));
+        productsCubit.emit(
+          const ProductsLoaded(products: [], isOffline: true, hasReachedMax: true),
+        );
+        return productsCubit;
+      },
+      act: (cubit) => cubit.refresh(),
+      expect: () => [
+        ProductsLoaded(products: [tProduct], isOffline: false, hasReachedMax: true),
+      ],
+    );
+
+    blocTest<ProductsCubit, ProductsState>(
+      'refresh does NOT emit when data is same',
+      build: () {
+        when(
+          () => mockGetProductsUseCase(limit: 20, skip: 0),
+        ).thenAnswer((_) => Stream.value(Right(tProductsResult)));
+        productsCubit.emit(
+          ProductsLoaded(products: [tProduct], isOffline: false, hasReachedMax: true),
+        );
+        return productsCubit;
+      },
+      act: (cubit) => cubit.refresh(),
+      expect: () => [],
+    );
   });
 }

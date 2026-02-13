@@ -89,7 +89,6 @@ Future<void> setupDependencies() async {
   sl.registerLazySingleton(() => GetCategoriesUseCase(sl()));
   sl.registerLazySingleton(() => GetProductsByCategoryUseCase(sl()));
   sl.registerLazySingleton(() => SearchProductsUseCase(sl()));
-  sl.registerLazySingleton(() => SearchProductsUseCase(sl()));
   sl.registerLazySingleton(() => SearchProductsLocallyUseCase(sl()));
 
   sl.registerLazySingleton(() => GetProductOptionsUseCase());
